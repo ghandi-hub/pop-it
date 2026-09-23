@@ -12,7 +12,12 @@
 	let { snapshot, onToggleSound, soundEnabled }: Props = $props();
 </script>
 
-<div class="w-full max-w-xl mx-auto flex flex-col gap-2 select-none">
+<div
+	role="region"
+	aria-label="Game HUD"
+	class="w-full max-w-xl mx-auto flex flex-col gap-2 select-none"
+	onpointerdown={(e) => e.stopPropagation()}
+>
 	<!-- Top Bar: Level, Best Score, Sound Toggle -->
 	<div class="flex items-center justify-between gap-2">
 		<!-- Level Badge (High contrast dark ink & bright yellow) -->

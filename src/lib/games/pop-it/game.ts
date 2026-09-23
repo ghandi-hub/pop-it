@@ -1,5 +1,5 @@
 import { getLevelConfig } from './difficulty';
-import { calculateBubblePopScore, calculateLevelClearScore, COMBO_TIMEOUT_MS } from './score';
+import { calculateBubblePopScore, calculateLevelClearScore } from './score';
 import { playSound, sound } from './sound';
 import type { Bubble, GameFeedbackEvent, GameSnapshot, GameState } from './types';
 
@@ -29,6 +29,8 @@ export class PopItGame {
 	private combo = 0;
 	private maxCombo = 0;
 	private lastPopTimestamp = 0;
+	private lastMissTimestamp = 0;
+	private lastPoppedBubbleId: number | null = null;
 	private bubblesPoppedTotal = 0;
 	private timeBonusAwarded = 0;
 	private isNewBest = false;
@@ -138,6 +140,8 @@ export class PopItGame {
 		this.maxCombo = 0;
 		this.bubblesPoppedTotal = 0;
 		this.lastPopTimestamp = 0;
+		this.lastMissTimestamp = 0;
+		this.lastPoppedBubbleId = null;
 		this.isNewBest = false;
 		this.timeBonusAwarded = 0;
 		this.hazardCount = 0;
@@ -207,6 +211,8 @@ export class PopItGame {
 		this.maxCombo = 0;
 		this.bubblesPoppedTotal = 0;
 		this.lastPopTimestamp = 0;
+		this.lastMissTimestamp = 0;
+		this.lastPoppedBubbleId = null;
 		this.isNewBest = false;
 		this.timeBonusAwarded = 0;
 		this.hazardCount = 0;
@@ -228,6 +234,7 @@ export class PopItGame {
 		this.activeCount = Math.min(totalCount, Math.max(1, activeCount));
 		this.pressedCount = 0;
 		this.lastFeedback = null;
+		this.lastPoppedBubbleId = null;
 
 		// Generate random permutation of indices using Fisher-Yates shuffle
 		const indices = Array.from({ length: totalCount }, (_, i) => i);
@@ -323,24 +330,76 @@ export class PopItGame {
 	}
 
 	/**
+	 * Register a missed tap (tapping empty screen, inactive bubble, or already popped bubble).
+	 * Resets the combo streak to 0.
+	 */
+	public registerMiss(): void {
+		if (this.state !== 'playing') return;
+
+		const now = performance.now();
+		if (now - this.lastMissTimestamp < 100) return;
+		this.lastMissTimestamp = now;
+
+		const hadCombo = this.combo > 0;
+		this.combo = 0;
+		this.lastPopTimestamp = 0;
+
+		// Haptic vibration feedback
+		if (typeof navigator !== 'undefined' && navigator.vibrate) {
+			navigator.vibrate(25);
+		}
+
+		playSound('miss');
+
+		if (hadCombo) {
+			this.lastFeedback = {
+				type: 'miss',
+				message: 'MISS! COMBO RESET',
+				timestamp: Date.now()
+			};
+
+			setTimeout(() => {
+				if (this.lastFeedback?.type === 'miss') {
+					this.lastFeedback = null;
+					this.notify();
+				}
+			}, 800);
+		}
+
+		this.notify();
+	}
+
+	/**
 	 * Handle pointer down on a bubble
 	 */
 	public popBubble(id: number): boolean {
 		if (this.state !== 'playing') return false;
 
 		const bubble = this.bubbles[id];
-		// Only active and unpressed bubbles can be popped
-		if (!bubble || !bubble.active || bubble.pressed) return false;
+		if (!bubble) return false;
+
+		const now = performance.now();
+
+		// Prevent micro-bounces on the same bubble that was just popped
+		if (bubble.id === this.lastPoppedBubbleId && now - this.lastPopTimestamp < 100) {
+			return false;
+		}
+
+		// If bubble is not active or already pressed -> MISCLICK (meleset!)
+		if (!bubble.active || bubble.pressed) {
+			this.registerMiss();
+			return false;
+		}
 
 		// 1. HAZARD BUBBLE POPPED (PENALTY!)
 		if (bubble.type === 'hazard') {
 			bubble.pressed = true;
+			this.lastPoppedBubbleId = id;
 			this.combo = 0;
-			this.lastPopTimestamp = 0;
+			this.lastPopTimestamp = now;
 
 			// Deduct 3 seconds
 			const penaltyMs = 3000;
-			const now = performance.now();
 			const elapsedMs = now - this.timerStartTime;
 			const currentRemainingMs = this.timerDurationMs - elapsedMs;
 
@@ -373,19 +432,15 @@ export class PopItGame {
 		// 2. GOLDEN BUBBLE POPPED (BONUS REWARD!)
 		if (bubble.type === 'golden') {
 			bubble.pressed = true;
+			this.lastPoppedBubbleId = id;
 			this.goldenBubbleId = null;
 			bubble.goldenTimeLeft = 0;
 			bubble.isExpiring = false;
 			this.pressedCount++;
 			this.bubblesPoppedTotal++;
 
-			// Combo logic
-			const now = performance.now();
-			if (this.lastPopTimestamp > 0 && now - this.lastPopTimestamp <= COMBO_TIMEOUT_MS) {
-				this.combo++;
-			} else {
-				this.combo = 1;
-			}
+			// Combo logic: Increment combo on each valid target pop
+			this.combo++;
 			this.lastPopTimestamp = now;
 			if (this.combo > this.maxCombo) {
 				this.maxCombo = this.combo;
@@ -420,6 +475,7 @@ export class PopItGame {
 
 		// 3. NORMAL BUBBLE POPPED
 		bubble.pressed = true;
+		this.lastPoppedBubbleId = id;
 		this.pressedCount++;
 		this.bubblesPoppedTotal++;
 
@@ -428,13 +484,8 @@ export class PopItGame {
 			navigator.vibrate(15);
 		}
 
-		// Combo logic
-		const now = performance.now();
-		if (this.lastPopTimestamp > 0 && now - this.lastPopTimestamp <= COMBO_TIMEOUT_MS) {
-			this.combo++;
-		} else {
-			this.combo = 1;
-		}
+		// Combo logic: Increment combo on each valid target pop
+		this.combo++;
 		this.lastPopTimestamp = now;
 		if (this.combo > this.maxCombo) {
 			this.maxCombo = this.combo;

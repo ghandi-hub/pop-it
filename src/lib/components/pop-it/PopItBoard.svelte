@@ -47,7 +47,7 @@
 	<!-- Dynamic Floating Feedback Banner on Special Event -->
 	{#if lastFeedback && gameState === 'playing'}
 		<div
-			class="absolute -top-3 sm:-top-4 z-20 px-3 py-1 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider border-2 border-[#111111] shadow-[3px_3px_0_#111111] animate-bounce pointer-events-none {lastFeedback.type === 'hazard' ? 'bg-[#EF4444] text-white' : 'bg-[#FFD23F] text-[#111111]'}"
+			class="absolute -top-3 sm:-top-4 z-20 px-3 py-1 rounded-full text-[11px] sm:text-xs font-black uppercase tracking-wider border-2 border-[#111111] shadow-[3px_3px_0_#111111] animate-bounce pointer-events-none {lastFeedback.type === 'hazard' || lastFeedback.type === 'miss' ? 'bg-[#EF4444] text-white' : 'bg-[#FFD23F] text-[#111111]'}"
 		>
 			{lastFeedback.message}
 		</div>

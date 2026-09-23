@@ -34,7 +34,7 @@ export interface SoundState {
 }
 
 export interface GameFeedbackEvent {
-	type: 'hazard' | 'golden' | 'combo';
+	type: 'hazard' | 'golden' | 'combo' | 'miss';
 	message: string;
 	timestamp: number;
 }

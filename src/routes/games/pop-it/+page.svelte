@@ -248,7 +248,15 @@
       </div>
     {:else}
       <!-- ACTIVE GAMEPLAY STATE -->
-      <div class="flex-1 flex flex-col justify-between py-1 relative">
+      <div
+        role="presentation"
+        class="flex-1 flex flex-col justify-between py-1 relative select-none"
+        onpointerdown={() => {
+          if (snapshot.state === "playing") {
+            game?.registerMiss();
+          }
+        }}
+      >
         <!-- HUD Header -->
         <GameHud {snapshot} {soundEnabled} onToggleSound={handleToggleSound} />
 

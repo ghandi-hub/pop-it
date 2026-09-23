@@ -273,7 +273,15 @@
         </div>
       {:else}
         <!-- ACTIVE GAMEPLAY -->
-        <div class="flex-1 flex flex-col justify-between py-1 relative">
+        <div
+          role="presentation"
+          class="flex-1 flex flex-col justify-between py-1 relative select-none"
+          onpointerdown={() => {
+            if (snapshot.state === "playing") {
+              game?.registerMiss();
+            }
+          }}
+        >
           <GameHud
             {snapshot}
             {soundEnabled}
@@ -302,13 +310,6 @@
           {#if snapshot.state === "game-over"}
             <GameOver {snapshot} onRestart={handleRestart} onHome={handleGoHome} />
           {/if}
-
-          <div
-            class="flex items-center justify-between px-2 pt-1 text-[10px] font-bold text-[#111111]/60 uppercase tracking-wider select-none"
-          >
-            <span>TAP OR CLICK BUBBLES QUICKLY</span>
-            <span>POPS NEVER WAIT</span>
-          </div>
         </div>
       {/if}
     </DeviceMockup>

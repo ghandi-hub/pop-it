@@ -83,6 +83,19 @@
 								</div>
 							</div>
 						</div>
+
+						<!-- Combo System -->
+						<div class="flex items-center gap-2.5 p-2 rounded-xl bg-[#FFFDE7]/80 border border-[#111111]/20">
+							<div class="w-8 h-8 rounded-full bg-[#FFD23F] border-2 border-black flex-shrink-0 flex items-center justify-center shadow-sm text-sm">
+								🔥
+							</div>
+							<div>
+								<div class="font-black text-xs uppercase text-[#111111]">SISTEM COMBO STREAK</div>
+								<div class="text-[10px] text-[#111111]/70 font-bold leading-tight">
+									Pencet target terus tanpa henti untuk akumulasi combo antar level! Hitungan combo <strong>direset</strong> jika meleset (misal ke layar kosong/bubble mati) atau terkena bom.
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

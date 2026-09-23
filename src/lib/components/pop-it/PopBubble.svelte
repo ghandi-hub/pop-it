@@ -95,15 +95,15 @@
 	});
 
 	function handlePointerDown(e: PointerEvent) {
-		// Only active and unpressed bubbles can be popped
-		if (!active || pressed || disabled) return;
+		e.stopPropagation();
+		if (disabled) return;
 		onPop(id);
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
 		if (e.key === 'Enter' || e.key === ' ') {
 			e.preventDefault();
-			if (active && !pressed && !disabled) {
+			if (!disabled) {
 				onPop(id);
 			}
 		}
@@ -132,16 +132,16 @@
 		<!-- Interactive Bubble Dome Button -->
 		<button
 			type="button"
-			disabled={disabled || !active}
+			{disabled}
 			aria-label="Bubble {id + 1} {type === 'hazard' ? 'Hazard Bomb' : type === 'golden' ? 'Golden Bonus' : !active ? 'Inactive' : pressed ? 'Popped' : 'Lit target'}"
 			aria-pressed={pressed}
 			onpointerdown={handlePointerDown}
 			onkeydown={handleKeyDown}
 			class="relative w-full h-full rounded-full select-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-black focus-visible:ring-offset-2 transition-all duration-100 ease-out {active
 				? pressed
-					? 'scale-[0.84] translate-y-1 shadow-[inset_0_4px_6px_rgba(0,0,0,0.8)] cursor-default'
+					? 'scale-[0.84] translate-y-1 shadow-[inset_0_4px_6px_rgba(0,0,0,0.8)] cursor-pointer'
 					: `cursor-pointer active:scale-[0.88] active:translate-y-0.5 hover:scale-[1.04] ${theme.glow}`
-				: 'scale-[0.92] cursor-not-allowed opacity-50'}"
+				: 'scale-[0.92] cursor-pointer opacity-50'}"
 		>
 			<!-- Bubble dome surface -->
 			<div

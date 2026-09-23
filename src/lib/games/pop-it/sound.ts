@@ -18,7 +18,8 @@ export type SoundEvent =
 	| 'hazard-pop'
 	| 'golden-pop'
 	| 'countdown'
-	| 'hurry-up';
+	| 'hurry-up'
+	| 'miss';
 
 const SOUND_STORAGE_KEY = 'pop-it-time-attack:sound-enabled';
 
@@ -377,6 +378,9 @@ class SoundManager {
 				case 'hurry-up':
 					this.playHurryUpSound(now);
 					break;
+				case 'miss':
+					this.playMissSound(now);
+					break;
 			}
 		} catch {
 			// Fail gracefully
@@ -734,6 +738,26 @@ class SoundManager {
 				this.timeAudio.play().catch(() => {});
 			} catch {}
 		}
+	}
+
+	/**
+	 * Play subtle, tactile thud sound on misclick / miss
+	 */
+	private playMissSound(now: number): void {
+		if (!this.ctx || !this.masterGain) return;
+		try {
+			const osc = this.ctx.createOscillator();
+			const gain = this.ctx.createGain();
+			osc.type = 'triangle';
+			osc.frequency.setValueAtTime(160, now);
+			osc.frequency.exponentialRampToValueAtTime(70, now + 0.1);
+			gain.gain.setValueAtTime(0.25, now);
+			gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+			osc.connect(gain);
+			gain.connect(this.masterGain);
+			osc.start(now);
+			osc.stop(now + 0.13);
+		} catch {}
 	}
 }
 
