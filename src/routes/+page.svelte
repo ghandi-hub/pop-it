@@ -9,7 +9,10 @@
   import LevelClear from "$lib/components/pop-it/LevelClear.svelte";
   import GameOver from "$lib/components/pop-it/GameOver.svelte";
   import DeviceMockup from "$lib/components/pop-it/DeviceMockup.svelte";
+  import GuideModal from "$lib/components/pop-it/GuideModal.svelte";
   import hazardSvg from "$lib/assets/hazard.svg";
+
+  const GUIDE_STORAGE_KEY = "pop-it-time-attack:has-seen-guide";
 
   let game: PopItGame | null = null;
   let snapshot = $state<GameSnapshot>({
@@ -38,8 +41,24 @@
   let leaderboardData = $state<any[]>([]);
   let loadingLeaderboard = $state(false);
 
+  let showGuide = $state(false);
+  let hasSeenGuide = $state(true);
+
   onMount(() => {
     soundEnabled = sound.isSoundEnabled();
+
+    try {
+      const seen = localStorage.getItem(GUIDE_STORAGE_KEY);
+      if (!seen) {
+        hasSeenGuide = false;
+        showGuide = true;
+      } else {
+        hasSeenGuide = true;
+      }
+    } catch {
+      hasSeenGuide = true;
+    }
+
     game = new PopItGame();
     const unsubscribe = game.subscribe((snap) => {
       snapshot = snap;
@@ -55,7 +74,16 @@
     game?.destroy();
   });
 
+  function handleCloseGuide() {
+    showGuide = false;
+    hasSeenGuide = true;
+    try {
+      localStorage.setItem(GUIDE_STORAGE_KEY, "true");
+    } catch {}
+  }
+
   function handleStartGame() {
+    handleCloseGuide();
     sound.init();
     game?.start();
   }
@@ -66,6 +94,11 @@
 
   function handleRestart() {
     game?.restart();
+  }
+
+  function handleGoHome() {
+    sound.stopGameOverSound();
+    game?.goToMenu();
   }
 
   function handleToggleSound() {
@@ -161,30 +194,32 @@
           <div
             class="my-3 p-3.5 rounded-3xl bg-white border-3 border-[#111111] shadow-[5px_5px_0_#111111] max-w-xs w-full"
           >
-            <!-- Bubble Types Legend -->
-            <div class="grid grid-cols-3 gap-1.5 pb-2.5 mb-2.5 border-b-2 border-[#111111]/20 text-[10px] font-black uppercase text-center">
-              <div class="flex flex-col items-center">
-                <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff7043] to-[#d84315] border-2 border-black flex items-center justify-center shadow-sm mb-1">
-                  <div class="w-1.5 h-1.5 rounded-full bg-white/70"></div>
+            {#if !hasSeenGuide}
+              <!-- Bubble Types Legend (Shown only on first visit) -->
+              <div class="grid grid-cols-3 gap-1.5 pb-2.5 mb-2.5 border-b-2 border-[#111111]/20 text-[10px] font-black uppercase text-center">
+                <div class="flex flex-col items-center">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff7043] to-[#d84315] border-2 border-black flex items-center justify-center shadow-sm mb-1">
+                    <div class="w-1.5 h-1.5 rounded-full bg-white/70"></div>
+                  </div>
+                  <span class="text-[#111111]">TARGET</span>
+                  <span class="text-[8px] text-[#111111]/60 font-bold">+POINTS</span>
                 </div>
-                <span class="text-[#111111]">TARGET</span>
-                <span class="text-[8px] text-[#111111]/60 font-bold">+POINTS</span>
-              </div>
-              <div class="flex flex-col items-center">
-                <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#fffde7] to-[#ffd600] border-2 border-black flex items-center justify-center shadow-sm mb-1 ring-1 ring-yellow-400">
-                  <span class="text-xs">⭐</span>
+                <div class="flex flex-col items-center">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#fffde7] to-[#ffd600] border-2 border-black flex items-center justify-center shadow-sm mb-1 ring-1 ring-yellow-400">
+                    <span class="text-xs">⭐</span>
+                  </div>
+                  <span class="text-[#B78103]">GOLDEN</span>
+                  <span class="text-[8px] text-[#111111]/60 font-bold">+2s & BONUS</span>
                 </div>
-                <span class="text-[#B78103]">GOLDEN</span>
-                <span class="text-[8px] text-[#111111]/60 font-bold">+2s & BONUS</span>
-              </div>
-              <div class="flex flex-col items-center">
-                <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff2d55] to-[#7f0000] border-2 border-black flex items-center justify-center shadow-sm mb-1 animate-pulse p-1">
-                  <img src={hazardSvg} alt="Hazard" class="w-full h-full object-contain" />
+                <div class="flex flex-col items-center">
+                  <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff2d55] to-[#7f0000] border-2 border-black flex items-center justify-center shadow-sm mb-1 animate-pulse p-1">
+                    <img src={hazardSvg} alt="Hazard" class="w-full h-full object-contain" />
+                  </div>
+                  <span class="text-[#D32F2F]">HAZARD</span>
+                  <span class="text-[8px] text-[#D32F2F] font-bold">AVOID! -3s</span>
                 </div>
-                <span class="text-[#D32F2F]">HAZARD</span>
-                <span class="text-[8px] text-[#D32F2F] font-bold">AVOID! -3s</span>
               </div>
-            </div>
+            {/if}
 
             <div
               class="flex items-center justify-between text-xs font-black text-[#111111]"
@@ -226,6 +261,14 @@
                 🏆 RANKS
               </PopItButton>
             </div>
+
+            <button
+              type="button"
+              onclick={() => (showGuide = true)}
+              class="w-full py-1 text-center text-xs font-black uppercase tracking-wider text-[#111111]/70 hover:text-[#111111] hover:underline cursor-pointer transition-colors"
+            >
+              HOW TO PLAY
+            </button>
           </div>
         </div>
       {:else}
@@ -257,7 +300,7 @@
           </div>
 
           {#if snapshot.state === "game-over"}
-            <GameOver {snapshot} onRestart={handleRestart} />
+            <GameOver {snapshot} onRestart={handleRestart} onHome={handleGoHome} />
           {/if}
 
           <div
@@ -367,4 +410,7 @@
       </div>
     </div>
   {/if}
+
+  <!-- Guide Modal -->
+  <GuideModal open={showGuide} onClose={handleCloseGuide} />
 </div>

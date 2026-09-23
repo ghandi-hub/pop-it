@@ -5,9 +5,10 @@
   interface Props {
     snapshot: GameSnapshot;
     onRestart: () => void;
+    onHome?: () => void;
   }
 
-  let { snapshot, onRestart }: Props = $props();
+  let { snapshot, onRestart, onHome }: Props = $props();
 
   let playerName = $state("");
   let isSubmitting = $state(false);
@@ -167,15 +168,26 @@
 		</form> -->
 
     <!-- Action Buttons -->
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2.5 mt-2">
       <PopItButton
         variant="primary"
         size="lg"
         onclick={onRestart}
-        class="w-full"
+        class="w-full text-lg shadow-[4px_4px_0_#111111]"
       >
         TRY AGAIN ↺
       </PopItButton>
+
+      {#if onHome}
+        <PopItButton
+          variant="paper"
+          size="md"
+          onclick={onHome}
+          class="w-full text-sm font-black uppercase shadow-[3px_3px_0_#111111]"
+        >
+          MAIN MENU
+        </PopItButton>
+      {/if}
     </div>
   </div>
 </div>

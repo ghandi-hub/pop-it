@@ -7,34 +7,31 @@
 	let { level, timeBonus }: Props = $props();
 </script>
 
-<div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-4">
+<div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-3 select-none">
 	<div
-		class="relative flex flex-col items-center justify-center p-6 rounded-3xl bg-[#FFD23F] border-4 border-[#111111] shadow-[8px_8px_0_#111111] animate-in zoom-in-95 duration-200"
+		class="px-6 py-3 sm:px-8 sm:py-3.5 rounded-2xl bg-[#111111] text-white border-3 border-[#111111] shadow-[5px_5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center animate-pop"
 	>
-		<!-- Top star banner -->
-		<div class="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-[#111111] mb-1">
-			<span>★</span>
-			<span>STAGE COMPLETED</span>
-			<span>★</span>
-		</div>
-
-		<!-- Title -->
-		<h2 class="font-display text-3xl sm:text-4xl md:text-5xl font-black text-[#111111] tracking-tight uppercase leading-none drop-shadow-sm">
+		<h2 class="font-display text-xl sm:text-2xl md:text-3xl font-black uppercase tracking-wider text-[#FFD23F] leading-none">
 			STAGE {level} CLEAR!
 		</h2>
-
-		<!-- Time Bonus Banner (High contrast dark ink & yellow neon) -->
-		<div
-			class="mt-3 flex items-center gap-2 px-4 py-2 rounded-2xl bg-[#111111] text-[#FFD23F] border-3 border-[#111111] shadow-[4px_4px_0_#FF5C35] transform -rotate-1 animate-pulse"
-		>
-			<span class="text-lg">⏱️</span>
-			<span class="font-display text-xl sm:text-2xl font-black tracking-wider text-[#FFD23F]">
-				+{timeBonus.toFixed(1)}s TIME BONUS
-			</span>
-		</div>
-
-		<p class="text-xs font-black text-[#111111] uppercase tracking-widest mt-3">
-			GET READY FOR STAGE {level + 1}...
-		</p>
+		<span class="font-mono-tabular font-black text-xs sm:text-sm text-[#00E5FF] tracking-wide mt-1">
+			+{timeBonus.toFixed(1)}s TIME BONUS
+		</span>
 	</div>
 </div>
+
+<style>
+	@keyframes pop {
+		0% {
+			transform: scale(0.85);
+			opacity: 0;
+		}
+		100% {
+			transform: scale(1);
+			opacity: 1;
+		}
+	}
+	.animate-pop {
+		animation: pop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+	}
+</style>

@@ -73,7 +73,7 @@
 				<span class="bg-[#111111] text-[#00E5FF] px-2 py-0.5 rounded font-black border border-[#111111]">
 					{activeCount} TARGETS
 				</span>
-				{#if hasActiveHazard}
+			<!--	{#if hasActiveHazard}
 					<span class="bg-[#EF4444] text-white px-2 py-0.5 rounded font-black border border-[#111111] animate-pulse">
 						⚠️ AVOID BOMB
 					</span>
@@ -82,7 +82,7 @@
 					<span class="bg-[#FFD23F] text-[#111111] px-1.5 py-0.5 rounded font-black border border-[#111111] animate-bounce">
 						⭐ 2s BONUS
 					</span>
-				{/if}
+				{/if} -->
 			</div>
 		</div>
 

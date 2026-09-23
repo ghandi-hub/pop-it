@@ -190,6 +190,38 @@ export class PopItGame {
 	}
 
 	/**
+	 * Return to idle state / main menu
+	 */
+	public goToMenu(): void {
+		this.cleanupTimers();
+		sound.stopGameOverSound();
+		sound.stopLevelWinSound();
+		sound.stopCountDownSound();
+		sound.stopTimeSound();
+		sound.stopBgm();
+
+		this.state = 'idle';
+		this.level = 1;
+		this.score = 0;
+		this.combo = 0;
+		this.maxCombo = 0;
+		this.bubblesPoppedTotal = 0;
+		this.lastPopTimestamp = 0;
+		this.isNewBest = false;
+		this.timeBonusAwarded = 0;
+		this.hazardCount = 0;
+		this.lastFeedback = null;
+		this.lastGoldenLevel = 0;
+
+		const config = getLevelConfig(this.level);
+		this.baseTime = config.baseTime;
+		this.remainingTime = config.baseTime;
+		this.bubbles = [];
+
+		this.notify();
+	}
+
+	/**
 	 * Randomly select active (lit-up) bubbles, golden bonus, and hazard bubbles
 	 */
 	private initBubbles(totalCount: number, activeCount: number): void {
