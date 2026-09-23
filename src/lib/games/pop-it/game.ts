@@ -113,6 +113,8 @@ export class PopItGame {
 	 */
 	public start(): void {
 		this.cleanupTimers();
+		sound.stopGameOverSound();
+		sound.stopLevelWinSound();
 
 		this.level = 1;
 		this.score = 0;
@@ -244,6 +246,7 @@ export class PopItGame {
 	 * Advances endlessly to the next level (Level 2, 3 ... 20, 50, 100+)
 	 */
 	private advanceToNextLevel(carriedTime: number): void {
+		sound.stopLevelWinSound();
 		this.level++;
 		const nextConfig = getLevelConfig(this.level);
 

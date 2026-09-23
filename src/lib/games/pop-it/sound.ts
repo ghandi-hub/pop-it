@@ -25,6 +25,10 @@ class SoundManager {
 	private levelWinBuffer: AudioBuffer | null = null;
 	private gameOverBuffer: AudioBuffer | null = null;
 
+	// Active sources for stoppable audio
+	private gameOverSource: AudioBufferSourceNode | null = null;
+	private levelWinSource: AudioBufferSourceNode | null = null;
+
 	// Immediate HTMLAudioElement fallback pool for pop.mp3
 	private popPool: HTMLAudioElement[] = [];
 	private popPoolIndex = 0;
@@ -151,6 +155,9 @@ class SoundManager {
 		if (this.enabled) {
 			this.init();
 			this.resume();
+		} else {
+			this.stopGameOverSound();
+			this.stopLevelWinSound();
 		}
 
 		return this.enabled;
@@ -201,6 +208,44 @@ class SoundManager {
 		this.isBgmPlaying = false;
 		if (this.bgmAudio) {
 			this.bgmAudio.pause();
+		}
+	}
+
+	/**
+	 * Instantly stop game-over sound when player restarts / tries again
+	 */
+	public stopGameOverSound(): void {
+		if (this.gameOverSource) {
+			try {
+				this.gameOverSource.stop();
+				this.gameOverSource.disconnect();
+			} catch {}
+			this.gameOverSource = null;
+		}
+		if (this.gameOverAudio) {
+			try {
+				this.gameOverAudio.pause();
+				this.gameOverAudio.currentTime = 0;
+			} catch {}
+		}
+	}
+
+	/**
+	 * Instantly stop level-win sound when advancing to next stage
+	 */
+	public stopLevelWinSound(): void {
+		if (this.levelWinSource) {
+			try {
+				this.levelWinSource.stop();
+				this.levelWinSource.disconnect();
+			} catch {}
+			this.levelWinSource = null;
+		}
+		if (this.levelWinAudio) {
+			try {
+				this.levelWinAudio.pause();
+				this.levelWinAudio.currentTime = 0;
+			} catch {}
 		}
 	}
 
@@ -275,6 +320,8 @@ class SoundManager {
 	 * Play level-win.mp3 on level completion
 	 */
 	private playLevelWinSound(now: number): void {
+		this.stopLevelWinSound();
+
 		// Duck BGM momentarily during victory sound
 		if (this.bgmAudio && this.isBgmPlaying) {
 			this.bgmAudio.volume = 0.15;
@@ -293,6 +340,14 @@ class SoundManager {
 				gain.gain.setValueAtTime(1.0, now);
 				source.connect(gain);
 				gain.connect(this.masterGain);
+
+				this.levelWinSource = source;
+				source.onended = () => {
+					if (this.levelWinSource === source) {
+						this.levelWinSource = null;
+					}
+				};
+
 				source.start(now);
 				return;
 			} catch {}
@@ -310,6 +365,7 @@ class SoundManager {
 	private playGameOverSound(now: number): void {
 		// Stop BGM completely on game over
 		this.stopBgm();
+		this.stopGameOverSound();
 
 		if (this.gameOverBuffer && this.ctx && this.masterGain) {
 			try {
@@ -319,6 +375,14 @@ class SoundManager {
 				gain.gain.setValueAtTime(1.0, now);
 				source.connect(gain);
 				gain.connect(this.masterGain);
+
+				this.gameOverSource = source;
+				source.onended = () => {
+					if (this.gameOverSource === source) {
+						this.gameOverSource = null;
+					}
+				};
+
 				source.start(now);
 				return;
 			} catch {}
