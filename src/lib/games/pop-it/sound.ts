@@ -2,6 +2,8 @@ import popSoundUrl from '$lib/assets/sound/pop.mp3';
 import levelWinSoundUrl from '$lib/assets/sound/level-win.mp3';
 import gameOverSoundUrl from '$lib/assets/sound/game-over.mp3';
 import backsoundUrl from '$lib/assets/sound/backsound.mp3';
+import hazardSoundUrl from '$lib/assets/sound/hazard-bubble.mp3';
+import goldenSoundUrl from '$lib/assets/sound/golden-bubble.mp3';
 
 export type SoundEvent =
 	| 'bubble-pop'
@@ -10,7 +12,9 @@ export type SoundEvent =
 	| 'time-bonus'
 	| 'game-over'
 	| 'timer-warning'
-	| 'timer-critical';
+	| 'timer-critical'
+	| 'hazard-pop'
+	| 'golden-pop';
 
 const SOUND_STORAGE_KEY = 'pop-it-time-attack:sound-enabled';
 
@@ -24,6 +28,8 @@ class SoundManager {
 	private popBuffer: AudioBuffer | null = null;
 	private levelWinBuffer: AudioBuffer | null = null;
 	private gameOverBuffer: AudioBuffer | null = null;
+	private hazardBuffer: AudioBuffer | null = null;
+	private goldenBuffer: AudioBuffer | null = null;
 
 	// Active sources for stoppable audio
 	private gameOverSource: AudioBufferSourceNode | null = null;
@@ -36,6 +42,8 @@ class SoundManager {
 	// Fallback audio elements for longer sounds
 	private levelWinAudio: HTMLAudioElement | null = null;
 	private gameOverAudio: HTMLAudioElement | null = null;
+	private hazardAudio: HTMLAudioElement | null = null;
+	private goldenAudio: HTMLAudioElement | null = null;
 
 	// Background Music (backsound.mp3)
 	private bgmAudio: HTMLAudioElement | null = null;
@@ -86,6 +94,16 @@ class SoundManager {
 			this.bgmAudio.preload = 'auto';
 			this.bgmAudio.loop = true;
 			this.bgmAudio.volume = 0.35; // balanced background level
+
+			// 5. Preload hazard-bubble.mp3
+			this.hazardAudio = new Audio(hazardSoundUrl);
+			this.hazardAudio.preload = 'auto';
+			this.hazardAudio.volume = 0.95;
+
+			// 6. Preload golden-bubble.mp3
+			this.goldenAudio = new Audio(goldenSoundUrl);
+			this.goldenAudio.preload = 'auto';
+			this.goldenAudio.volume = 0.95;
 		} catch (err) {
 			console.warn('Audio preloading error:', err);
 		}
@@ -113,6 +131,8 @@ class SoundManager {
 				if (!this.popBuffer) this.loadBuffer(popSoundUrl, (buf) => (this.popBuffer = buf));
 				if (!this.levelWinBuffer) this.loadBuffer(levelWinSoundUrl, (buf) => (this.levelWinBuffer = buf));
 				if (!this.gameOverBuffer) this.loadBuffer(gameOverSoundUrl, (buf) => (this.gameOverBuffer = buf));
+				if (!this.hazardBuffer) this.loadBuffer(hazardSoundUrl, (buf) => (this.hazardBuffer = buf));
+				if (!this.goldenBuffer) this.loadBuffer(goldenSoundUrl, (buf) => (this.goldenBuffer = buf));
 			}
 		} catch {
 			// Web Audio not supported
@@ -275,6 +295,12 @@ class SoundManager {
 					break;
 				case 'timer-critical':
 					this.playTimerCritical(now);
+					break;
+				case 'hazard-pop':
+					this.playHazardSound(now);
+					break;
+				case 'golden-pop':
+					this.playGoldenSound(now);
 					break;
 			}
 		} catch {
@@ -448,6 +474,88 @@ class SoundManager {
 		gain.connect(this.masterGain);
 		osc.start(now);
 		osc.stop(now + 0.06);
+	}
+
+	private playHazardSound(now: number): void {
+		if (this.hazardBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.hazardBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+				source.start(now);
+				return;
+			} catch {}
+		}
+
+		if (this.hazardAudio) {
+			try {
+				this.hazardAudio.currentTime = 0;
+				this.hazardAudio.play().catch(() => {});
+				return;
+			} catch {}
+		}
+
+		// Fallback synthesizer if file not loaded
+		if (!this.ctx || !this.masterGain) return;
+		try {
+			const osc = this.ctx.createOscillator();
+			const gain = this.ctx.createGain();
+			osc.type = 'sawtooth';
+			osc.frequency.setValueAtTime(260, now);
+			osc.frequency.exponentialRampToValueAtTime(70, now + 0.28);
+			gain.gain.setValueAtTime(0.45, now);
+			gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+			osc.connect(gain);
+			gain.connect(this.masterGain);
+			osc.start(now);
+			osc.stop(now + 0.32);
+		} catch {}
+	}
+
+	private playGoldenSound(now: number): void {
+		if (this.goldenBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.goldenBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+				source.start(now);
+				return;
+			} catch {}
+		}
+
+		if (this.goldenAudio) {
+			try {
+				this.goldenAudio.currentTime = 0;
+				this.goldenAudio.play().catch(() => {});
+				return;
+			} catch {}
+		}
+
+		// Fallback synthesizer if file not loaded
+		if (!this.ctx || !this.masterGain) return;
+		try {
+			const notes = [1046.5, 1318.5, 1567.98, 2093.0];
+			notes.forEach((freq, idx) => {
+				if (!this.ctx || !this.masterGain) return;
+				const noteTime = now + idx * 0.05;
+				const osc = this.ctx.createOscillator();
+				const gain = this.ctx.createGain();
+				osc.type = 'triangle';
+				osc.frequency.setValueAtTime(freq, noteTime);
+				gain.gain.setValueAtTime(0.4, noteTime);
+				gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.22);
+				osc.connect(gain);
+				gain.connect(this.masterGain);
+				osc.start(noteTime);
+				osc.stop(noteTime + 0.25);
+			});
+		} catch {}
 	}
 }
 

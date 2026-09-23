@@ -9,6 +9,7 @@
   import LevelClear from "$lib/components/pop-it/LevelClear.svelte";
   import GameOver from "$lib/components/pop-it/GameOver.svelte";
   import DeviceMockup from "$lib/components/pop-it/DeviceMockup.svelte";
+  import hazardSvg from "$lib/assets/hazard.svg";
 
   let game: PopItGame | null = null;
   let snapshot = $state<GameSnapshot>({
@@ -17,6 +18,7 @@
     bubbles: [],
     totalBubbles: 20,
     activeCount: 4,
+    hazardCount: 0,
     pressedCount: 0,
     remainingTime: 10.0,
     baseTime: 10.0,
@@ -27,6 +29,7 @@
     bestLevel: 1,
     timeBonusAwarded: 2.0,
     isNewBest: false,
+    lastFeedback: null,
   });
 
   let soundEnabled = $state(true);
@@ -130,27 +133,37 @@
           </p>
         </div>
 
-        <!-- Visual Preview Badge / Toy Teaser -->
+        <!-- Visual Toy Preview & Guide -->
         <div
-          class="my-4 p-4 rounded-3xl bg-white border-3 border-[#111111] shadow-[5px_5px_0_#111111] max-w-xs w-full"
+          class="my-3 p-3.5 rounded-3xl bg-white border-3 border-[#111111] shadow-[5px_5px_0_#111111] max-w-xs w-full"
         >
-          <div class="flex justify-center gap-3 mb-3">
-            <div
-              class="w-10 h-10 rounded-full bg-gradient-to-b from-[#ff7043] to-[#d84315] border-2 border-black shadow-[0_3px_4px_rgba(0,0,0,0.3)] animate-bounce"
-            ></div>
-            <div
-              class="w-10 h-10 rounded-full bg-gradient-to-b from-[#ffeb3b] to-[#fbc02d] border-2 border-black shadow-[0_3px_4px_rgba(0,0,0,0.3)] animate-bounce [animation-delay:150ms]"
-            ></div>
-            <div
-              class="w-10 h-10 rounded-full bg-gradient-to-b from-[#4dd0e1] to-[#00acc1] border-2 border-black shadow-[0_3px_4px_rgba(0,0,0,0.3)] animate-bounce [animation-delay:300ms]"
-            ></div>
-            <div
-              class="w-10 h-10 rounded-full bg-gradient-to-b from-[#ff80ab] to-[#f50057] border-2 border-black shadow-[0_3px_4px_rgba(0,0,0,0.3)] animate-bounce [animation-delay:450ms]"
-            ></div>
+          <!-- Bubble Types Legend -->
+          <div class="grid grid-cols-3 gap-1.5 pb-2.5 mb-2.5 border-b-2 border-[#111111]/20 text-[10px] font-black uppercase text-center">
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff7043] to-[#d84315] border-2 border-black flex items-center justify-center shadow-sm mb-1">
+                <div class="w-1.5 h-1.5 rounded-full bg-white/70"></div>
+              </div>
+              <span class="text-[#111111]">TARGET</span>
+              <span class="text-[8px] text-[#111111]/60 font-bold">+POINTS</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#fffde7] to-[#ffd600] border-2 border-black flex items-center justify-center shadow-sm mb-1 ring-1 ring-yellow-400">
+                <span class="text-xs">⭐</span>
+              </div>
+              <span class="text-[#B78103]">GOLDEN</span>
+              <span class="text-[8px] text-[#111111]/60 font-bold">+2s & BONUS</span>
+            </div>
+            <div class="flex flex-col items-center">
+              <div class="w-7 h-7 rounded-full bg-gradient-to-b from-[#ff2d55] to-[#7f0000] border-2 border-black flex items-center justify-center shadow-sm mb-1 animate-pulse p-1">
+                <img src={hazardSvg} alt="Hazard" class="w-full h-full object-contain" />
+              </div>
+              <span class="text-[#D32F2F]">HAZARD</span>
+              <span class="text-[8px] text-[#D32F2F] font-bold">AVOID! -3s</span>
+            </div>
           </div>
 
           <div
-            class="flex items-center justify-between text-xs font-black text-[#111111] border-t-2 border-[#111111]/20 pt-2.5"
+            class="flex items-center justify-between text-xs font-black text-[#111111]"
           >
             <span>PERSONAL BEST:</span>
             <span class="font-mono-tabular font-black text-[#D84315]">
@@ -198,6 +211,8 @@
           <PopItBoard
             bubbles={snapshot.bubbles}
             activeCount={snapshot.activeCount}
+            hazardCount={snapshot.hazardCount}
+            lastFeedback={snapshot.lastFeedback}
             gameState={snapshot.state}
             onPop={handlePop}
           />

@@ -1,10 +1,15 @@
 export type GameState = 'idle' | 'playing' | 'level-clear' | 'game-over';
 
+export type BubbleType = 'normal' | 'hazard' | 'golden';
+
 export interface Bubble {
 	id: number;
-	active: boolean; // true if this bubble is illuminated / target for this level
+	active: boolean; // true if this bubble is illuminated / interactive for this level
 	pressed: boolean;
+	type?: BubbleType;
 	colorIndex?: number;
+	goldenTimeLeft?: number;
+	isExpiring?: boolean;
 }
 
 export interface LevelConfig {
@@ -28,12 +33,19 @@ export interface SoundState {
 	volume: number;
 }
 
+export interface GameFeedbackEvent {
+	type: 'hazard' | 'golden' | 'combo';
+	message: string;
+	timestamp: number;
+}
+
 export interface GameSnapshot {
 	state: GameState;
 	level: number;
 	bubbles: Bubble[];
 	totalBubbles: number;
-	activeCount: number; // target count to pop
+	activeCount: number; // target count to pop (normal + golden)
+	hazardCount: number; // active hazard/bomb count on the board
 	pressedCount: number; // pressed target count
 	remainingTime: number; // seconds with 2 decimal places
 	baseTime: number;
@@ -44,4 +56,5 @@ export interface GameSnapshot {
 	bestLevel: number;
 	timeBonusAwarded: number;
 	isNewBest: boolean;
+	lastFeedback?: GameFeedbackEvent | null;
 }
