@@ -569,7 +569,7 @@ export class PopItGame {
 
 						this.lastFeedback = {
 							type: 'golden',
-							message: '💨 GOLDEN EXPIRED! (Turned Normal)',
+							message: 'GOLDEN EXPIRED! (Turned Normal)',
 							timestamp: Date.now()
 						};
 					} else {

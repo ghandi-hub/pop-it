@@ -115,15 +115,6 @@
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>
 			</div>
-			<div class="text-[9px] font-black uppercase tracking-widest text-center {hasActiveHazard ? 'text-[#D32F2F]' : hasGolden ? 'text-[#B78103]' : 'text-[#111111]/70'}">
-				{#if hasActiveHazard}
-					⚠️ DANGER: AVOID POPPING THE 💣 BOMB BUBBLE!
-				{:else if hasGolden}
-					⭐ QUICK! POP GOLDEN STAR IN 2 SECONDS (+2.0s & 100 PTS)!
-				{:else}
-					POP ONLY THE LIT BUBBLES
-				{/if}
-			</div>
 			<div class="flex gap-1">
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>

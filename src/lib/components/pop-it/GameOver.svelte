@@ -118,7 +118,7 @@
       >
         <span class="text-xs font-black text-[#111111]/70 uppercase">STAGE</span
         >
-        <span class="font-display font-black text-lg text-[#111111]"
+        <span class="font-display font-black text-sm text-[#111111]"
           >STAGE {snapshot.level}</span
         >
       </div>
