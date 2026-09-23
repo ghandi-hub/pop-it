@@ -93,7 +93,7 @@
 				class="w-full h-full rounded-full border border-black/30 bg-gradient-to-b transition-all duration-150 {active
 					? pressed
 						? theme.sunken
-						: `${theme.lit} animate-[pulse_1.8s_ease-in-out_infinite]`
+						: theme.lit
 					: 'from-[#424242] to-[#212121]'}"
 			>
 				{#if active && !pressed}

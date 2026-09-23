@@ -17,7 +17,7 @@
 		<!-- Retro Arcade Speaker Grill & Status Header -->
 		<div class="flex items-center justify-between px-2 sm:px-3 py-1 mb-1.5 select-none">
 			<div class="flex items-center gap-1.5">
-				<span class="w-2.5 h-2.5 rounded-full bg-[#FF4D4D] border border-black animate-pulse"></span>
+				<span class="w-2.5 h-2.5 rounded-full bg-[#FF4D4D] border border-black"></span>
 				<span class="w-2.5 h-2.5 rounded-full bg-[#FFD23F] border border-black"></span>
 				<span class="w-2.5 h-2.5 rounded-full bg-[#06D6A0] border border-black"></span>
 			</div>

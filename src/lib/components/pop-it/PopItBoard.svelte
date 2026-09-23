@@ -34,7 +34,7 @@
 		<!-- Embossed top toy branding -->
 		<div class="flex items-center justify-between pb-2 px-1 text-xs font-black uppercase tracking-wider text-[#111111]/80 select-none">
 			<span class="flex items-center gap-1.5">
-				<span class="w-2.5 h-2.5 rounded-full bg-[#EF476F] border border-[#111111] animate-pulse"></span>
+				<span class="w-2.5 h-2.5 rounded-full bg-[#EF476F] border border-[#111111]"></span>
 				<span>QUICK PUSH TOY</span>
 			</span>
 			<div class="flex items-center gap-1.5 font-mono-tabular tracking-wide text-[10px]">
