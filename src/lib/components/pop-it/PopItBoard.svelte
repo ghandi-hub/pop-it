@@ -11,12 +11,12 @@
 
 	let { bubbles, activeCount, gameState, onPop }: Props = $props();
 
+	// 4 columns on mobile gives generous breathing room so buttons never crowd each other
 	let gridColsClass = $derived.by(() => {
 		const count = bubbles.length;
-		if (count <= 20) return 'grid-cols-5';
-		if (count <= 25) return 'grid-cols-5';
-		if (count <= 30) return 'grid-cols-5 sm:grid-cols-6';
-		return 'grid-cols-6 sm:grid-cols-8';
+		if (count <= 20) return 'grid-cols-4 sm:grid-cols-5';
+		if (count <= 24) return 'grid-cols-4 sm:grid-cols-6';
+		return 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6';
 	});
 
 	let isLevelClear = $derived(gameState === 'level-clear');
@@ -24,10 +24,10 @@
 	let isDisabled = $derived(gameState !== 'playing');
 </script>
 
-<div class="relative w-full max-w-xl mx-auto flex items-center justify-center p-2">
+<div class="relative w-full max-w-xl mx-auto flex items-center justify-center p-0.5 sm:p-2">
 	<!-- Toy Pop It Outer Silicone Casing -->
 	<div
-		class="relative w-full rounded-3xl bg-[#FFD166] border-4 border-[#111111] p-3 sm:p-5 shadow-[8px_8px_0_#111111] transition-all duration-200 {isLevelClear
+		class="relative w-full rounded-2xl sm:rounded-3xl bg-[#FFD166] border-3 sm:border-4 border-[#111111] p-2.5 sm:p-4 shadow-[5px_5px_0_#111111] sm:shadow-[8px_8px_0_#111111] transition-all duration-200 {isLevelClear
 			? 'scale-[1.02] shadow-[10px_10px_0_#111111]'
 			: ''} {isGameOver ? 'opacity-85 filter contrast-90' : ''}"
 	>
@@ -47,18 +47,18 @@
 			</div>
 		</div>
 
-		<!-- Inner recessed silicone pad -->
+		<!-- Inner recessed silicone pad with generous gap between buttons -->
 		<div
-			class="relative rounded-2xl bg-[#FFE494] border-2 border-[#111111]/30 p-2 sm:p-3 shadow-[inset_0_4px_8px_rgba(0,0,0,0.2)]"
+			class="relative rounded-xl sm:rounded-2xl bg-[#FFE494] border-2 border-[#111111]/30 p-2 sm:p-3 shadow-[inset_0_4px_8px_rgba(0,0,0,0.2)]"
 		>
-			<!-- Dynamic Grid of Bubbles -->
-			<div class="grid {gridColsClass} gap-1 sm:gap-2 justify-items-center items-center">
+			<!-- Dynamic Grid of Bubbles with ample separation -->
+			<div class="grid {gridColsClass} gap-2.5 sm:gap-3.5 md:gap-4 justify-items-center items-center">
 				{#each bubbles as bubble (bubble.id)}
 					<PopBubble
 						id={bubble.id}
 						active={bubble.active}
 						pressed={bubble.pressed}
-						colorIndex={bubble.colorIndex ?? (Math.floor(bubble.id / 5))}
+						colorIndex={bubble.colorIndex ?? (Math.floor(bubble.id / 4))}
 						disabled={isDisabled}
 						{onPop}
 					/>
@@ -73,7 +73,7 @@
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>
 				<div class="w-3 h-1.5 rounded-full bg-[#111111]/30"></div>
 			</div>
-			<div class="text-[9px] font-bold text-[#111111]/60 uppercase tracking-widest">
+			<div class="text-[9px] font-black text-[#111111]/70 uppercase tracking-widest">
 				POP ONLY THE LIT BUBBLES
 			</div>
 			<div class="flex gap-1">

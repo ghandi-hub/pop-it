@@ -90,7 +90,7 @@
 	<meta name="description" content="Fast-paced tactile brutalist Pop It web game. Beat the clock, score combos, and clear the levels!" />
 </svelte:head>
 
-<main class="min-h-screen w-full bg-[#F4EBD0] py-4 px-2 sm:px-4 flex flex-col items-center justify-center">
+<main class="min-h-screen w-full bg-[#F4EBD0] py-2 px-1 sm:py-4 sm:px-4 flex flex-col items-center justify-center">
 	<DeviceMockup>
 		<!-- IDLE STATE: Start Menu -->
 		{#if snapshot.state === 'idle'}

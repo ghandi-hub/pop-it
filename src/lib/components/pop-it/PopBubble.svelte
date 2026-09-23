@@ -67,10 +67,10 @@
 	}
 </script>
 
-<div class="relative flex items-center justify-center p-1 sm:p-1.5 touch-manipulation">
-	<!-- Cavity socket in the silicone body -->
+<div class="relative flex items-center justify-center touch-manipulation">
+	<!-- Cavity socket in the silicone body (large, generous touch target) -->
 	<div
-		class="relative w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full {theme.cavity} p-1 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] flex items-center justify-center transition-all duration-150 {active
+		class="relative w-13 h-13 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full {theme.cavity} p-1 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] flex items-center justify-center transition-all duration-150 {active
 			? 'border border-black/40'
 			: 'opacity-40 border border-black/20'}"
 	>

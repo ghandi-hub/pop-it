@@ -90,7 +90,7 @@
 	<meta name="description" content="Fast-paced tactile brutalist Pop It web game. Press all bubbles before the timer expires!" />
 </svelte:head>
 
-<div class="min-h-screen w-full bg-[#F4EBD0] py-4 px-2 sm:px-4 flex flex-col items-center justify-between text-[#111111]">
+<div class="min-h-screen w-full bg-[#F4EBD0] py-2 px-1 sm:py-4 sm:px-4 flex flex-col items-center justify-between text-[#111111]">
 	<!-- Top Navigation / Title Header -->
 	<header class="w-full max-w-xl flex items-center justify-between py-2 px-1 select-none">
 		<div class="flex items-center gap-2">
