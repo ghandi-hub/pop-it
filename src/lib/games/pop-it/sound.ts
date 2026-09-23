@@ -4,6 +4,8 @@ import gameOverSoundUrl from '$lib/assets/sound/game-over.mp3';
 import backsoundUrl from '$lib/assets/sound/backsound.mp3';
 import hazardSoundUrl from '$lib/assets/sound/hazard-bubble.mp3';
 import goldenSoundUrl from '$lib/assets/sound/golden-bubble.mp3';
+import countDownSoundUrl from '$lib/assets/sound/count-down.mp3';
+import timeSoundUrl from '$lib/assets/sound/time.mp3';
 
 export type SoundEvent =
 	| 'bubble-pop'
@@ -14,7 +16,9 @@ export type SoundEvent =
 	| 'timer-warning'
 	| 'timer-critical'
 	| 'hazard-pop'
-	| 'golden-pop';
+	| 'golden-pop'
+	| 'countdown'
+	| 'hurry-up';
 
 const SOUND_STORAGE_KEY = 'pop-it-time-attack:sound-enabled';
 
@@ -30,10 +34,14 @@ class SoundManager {
 	private gameOverBuffer: AudioBuffer | null = null;
 	private hazardBuffer: AudioBuffer | null = null;
 	private goldenBuffer: AudioBuffer | null = null;
+	private countDownBuffer: AudioBuffer | null = null;
+	private timeBuffer: AudioBuffer | null = null;
 
 	// Active sources for stoppable audio
 	private gameOverSource: AudioBufferSourceNode | null = null;
 	private levelWinSource: AudioBufferSourceNode | null = null;
+	private countDownSource: AudioBufferSourceNode | null = null;
+	private timeSource: AudioBufferSourceNode | null = null;
 
 	// Immediate HTMLAudioElement fallback pool for pop.mp3
 	private popPool: HTMLAudioElement[] = [];
@@ -44,6 +52,9 @@ class SoundManager {
 	private gameOverAudio: HTMLAudioElement | null = null;
 	private hazardAudio: HTMLAudioElement | null = null;
 	private goldenAudio: HTMLAudioElement | null = null;
+	private countDownAudio: HTMLAudioElement | null = null;
+	private timeAudio: HTMLAudioElement | null = null;
+	private isTimePlaying = false;
 
 	// Background Music (backsound.mp3)
 	private bgmAudio: HTMLAudioElement | null = null;
@@ -104,6 +115,16 @@ class SoundManager {
 			this.goldenAudio = new Audio(goldenSoundUrl);
 			this.goldenAudio.preload = 'auto';
 			this.goldenAudio.volume = 0.95;
+
+			// 7. Preload count-down.mp3
+			this.countDownAudio = new Audio(countDownSoundUrl);
+			this.countDownAudio.preload = 'auto';
+			this.countDownAudio.volume = 0.95;
+
+			// 8. Preload time.mp3 (Hurry-up countdown sound)
+			this.timeAudio = new Audio(timeSoundUrl);
+			this.timeAudio.preload = 'auto';
+			this.timeAudio.volume = 0.95;
 		} catch (err) {
 			console.warn('Audio preloading error:', err);
 		}
@@ -133,6 +154,8 @@ class SoundManager {
 				if (!this.gameOverBuffer) this.loadBuffer(gameOverSoundUrl, (buf) => (this.gameOverBuffer = buf));
 				if (!this.hazardBuffer) this.loadBuffer(hazardSoundUrl, (buf) => (this.hazardBuffer = buf));
 				if (!this.goldenBuffer) this.loadBuffer(goldenSoundUrl, (buf) => (this.goldenBuffer = buf));
+				if (!this.countDownBuffer) this.loadBuffer(countDownSoundUrl, (buf) => (this.countDownBuffer = buf));
+				if (!this.timeBuffer) this.loadBuffer(timeSoundUrl, (buf) => (this.timeBuffer = buf));
 			}
 		} catch {
 			// Web Audio not supported
@@ -178,6 +201,8 @@ class SoundManager {
 		} else {
 			this.stopGameOverSound();
 			this.stopLevelWinSound();
+			this.stopCountDownSound();
+			this.stopTimeSound();
 		}
 
 		return this.enabled;
@@ -235,6 +260,7 @@ class SoundManager {
 	 * Instantly stop game-over sound when player restarts / tries again
 	 */
 	public stopGameOverSound(): void {
+		this.stopTimeSound();
 		if (this.gameOverSource) {
 			try {
 				this.gameOverSource.stop();
@@ -254,6 +280,7 @@ class SoundManager {
 	 * Instantly stop level-win sound when advancing to next stage
 	 */
 	public stopLevelWinSound(): void {
+		this.stopTimeSound();
 		if (this.levelWinSource) {
 			try {
 				this.levelWinSource.stop();
@@ -266,6 +293,48 @@ class SoundManager {
 				this.levelWinAudio.pause();
 				this.levelWinAudio.currentTime = 0;
 			} catch {}
+		}
+	}
+
+	/**
+	 * Instantly stop count-down sound
+	 */
+	public stopCountDownSound(): void {
+		if (this.countDownSource) {
+			try {
+				this.countDownSource.stop();
+				this.countDownSource.disconnect();
+			} catch {}
+			this.countDownSource = null;
+		}
+		if (this.countDownAudio) {
+			try {
+				this.countDownAudio.pause();
+				this.countDownAudio.currentTime = 0;
+			} catch {}
+		}
+	}
+
+	/**
+	 * Instantly stop hurry-up time sound and restore BGM volume
+	 */
+	public stopTimeSound(): void {
+		this.isTimePlaying = false;
+		if (this.timeSource) {
+			try {
+				this.timeSource.stop();
+				this.timeSource.disconnect();
+			} catch {}
+			this.timeSource = null;
+		}
+		if (this.timeAudio) {
+			try {
+				this.timeAudio.pause();
+				this.timeAudio.currentTime = 0;
+			} catch {}
+		}
+		if (this.bgmAudio && this.isBgmPlaying && this.enabled) {
+			this.bgmAudio.volume = 0.35;
 		}
 	}
 
@@ -301,6 +370,12 @@ class SoundManager {
 					break;
 				case 'golden-pop':
 					this.playGoldenSound(now);
+					break;
+				case 'countdown':
+					this.playCountDownSound(now);
+					break;
+				case 'hurry-up':
+					this.playHurryUpSound(now);
 					break;
 			}
 		} catch {
@@ -556,6 +631,109 @@ class SoundManager {
 				osc.stop(noteTime + 0.25);
 			});
 		} catch {}
+	}
+
+	/**
+	 * Play count-down.mp3 during the 3-2-1 countdown sequence
+	 */
+	private playCountDownSound(now: number): void {
+		this.stopCountDownSound();
+		this.stopBgm();
+
+		if (this.countDownBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.countDownBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+
+				this.countDownSource = source;
+				source.onended = () => {
+					if (this.countDownSource === source) {
+						this.countDownSource = null;
+					}
+				};
+
+				source.start(now);
+				return;
+			} catch {}
+		}
+
+		if (this.countDownAudio) {
+			try {
+				this.countDownAudio.currentTime = 0;
+				this.countDownAudio.play().catch(() => {});
+				return;
+			} catch {}
+		}
+
+		// Fallback beep sequence if audio file cannot be loaded
+		if (!this.ctx || !this.masterGain) return;
+		try {
+			const osc = this.ctx.createOscillator();
+			const gain = this.ctx.createGain();
+			osc.type = 'sine';
+			osc.frequency.setValueAtTime(800, now);
+			gain.gain.setValueAtTime(0.3, now);
+			gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+			osc.connect(gain);
+			gain.connect(this.masterGain);
+			osc.start(now);
+			osc.stop(now + 0.16);
+		} catch {}
+	}
+
+	/**
+	 * Play time.mp3 when timer enters hurry-up threshold (<= 3.0s)
+	 */
+	private playHurryUpSound(now: number): void {
+		if (this.isTimePlaying) return;
+		this.isTimePlaying = true;
+
+		// Duck BGM slightly to make the ticking / hurry-up sound punchy and audible
+		if (this.bgmAudio && this.isBgmPlaying) {
+			this.bgmAudio.volume = 0.15;
+		}
+
+		if (this.timeBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.timeBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+
+				this.timeSource = source;
+				source.onended = () => {
+					if (this.timeSource === source) {
+						this.timeSource = null;
+						this.isTimePlaying = false;
+						if (this.bgmAudio && this.isBgmPlaying && this.enabled) {
+							this.bgmAudio.volume = 0.35;
+						}
+					}
+				};
+
+				source.start(now);
+				return;
+			} catch {}
+		}
+
+		if (this.timeAudio) {
+			try {
+				this.timeAudio.currentTime = 0;
+				this.timeAudio.onended = () => {
+					this.isTimePlaying = false;
+					if (this.bgmAudio && this.isBgmPlaying && this.enabled) {
+						this.bgmAudio.volume = 0.35;
+					}
+				};
+				this.timeAudio.play().catch(() => {});
+			} catch {}
+		}
 	}
 }
 

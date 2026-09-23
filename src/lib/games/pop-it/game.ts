@@ -38,6 +38,7 @@ export class PopItGame {
 	private goldenTimerDurationMs = 2000;
 	private goldenStartTime = 0;
 	private goldenBubbleId: number | null = null;
+	private lastGoldenLevel = 0;
 
 	// Persistence
 	private bestScore = 0;
@@ -46,6 +47,10 @@ export class PopItGame {
 	// Subscriptions
 	private listeners = new Set<GameListener>();
 	private nextLevelTimer: ReturnType<typeof setTimeout> | null = null;
+
+	// Countdown sequence (3... 2... 1... GO!)
+	private countdown = 3;
+	private countdownTimers: ReturnType<typeof setTimeout>[] = [];
 
 	constructor() {
 		this.loadStoredBest();
@@ -99,6 +104,7 @@ export class PopItGame {
 		return {
 			state: this.state,
 			level: this.level,
+			countdown: this.countdown,
 			bubbles: this.bubbles.map((b) => ({ ...b })),
 			totalBubbles: this.bubbles.length,
 			activeCount: this.activeCount,
@@ -118,12 +124,13 @@ export class PopItGame {
 	}
 
 	/**
-	 * Start or Restart a new game session at Level 1
+	 * Start or Restart a new game session at Level 1 with countdown
 	 */
 	public start(): void {
 		this.cleanupTimers();
 		sound.stopGameOverSound();
 		sound.stopLevelWinSound();
+		sound.stopBgm();
 
 		this.level = 1;
 		this.score = 0;
@@ -135,17 +142,47 @@ export class PopItGame {
 		this.timeBonusAwarded = 0;
 		this.hazardCount = 0;
 		this.lastFeedback = null;
+		this.lastGoldenLevel = 0;
 
 		const config = getLevelConfig(this.level);
 		this.baseTime = config.baseTime;
 		this.remainingTime = config.baseTime;
 		this.initBubbles(config.totalBubbles, config.activeCount);
 
-		this.state = 'playing';
-		sound.startBgm();
-
-		this.startTimer(this.remainingTime);
+		this.state = 'countdown';
+		this.countdown = 3;
+		playSound('countdown');
 		this.notify();
+
+		// Sequence timing matching count-down.mp3
+		// 0ms: 3 -> 1000ms: 2 -> 2000ms: 1 -> 3000ms: 0 (POP IT!) -> 3500ms: playing
+		const timer2 = setTimeout(() => {
+			if (this.state !== 'countdown') return;
+			this.countdown = 2;
+			this.notify();
+		}, 1000);
+
+		const timer1 = setTimeout(() => {
+			if (this.state !== 'countdown') return;
+			this.countdown = 1;
+			this.notify();
+		}, 2000);
+
+		const timerGo = setTimeout(() => {
+			if (this.state !== 'countdown') return;
+			this.countdown = 0;
+			this.notify();
+		}, 3000);
+
+		const timerPlay = setTimeout(() => {
+			if (this.state !== 'countdown') return;
+			this.state = 'playing';
+			sound.startBgm();
+			this.startTimer(this.remainingTime);
+			this.notify();
+		}, 3500);
+
+		this.countdownTimers.push(timer2, timer1, timerGo, timerPlay);
 	}
 
 	public restart(): void {
@@ -177,27 +214,43 @@ export class PopItGame {
 		const remainingIndices = indices.slice(this.activeCount);
 
 		// 1. Golden Bubble:
-		// Always spawn on Level 1 so player immediately tests & experiences it!
-		// Level >= 2: 55% chance or every odd level
+		// Early levels (Level 1-2): NO golden bubble.
+		// Level >= 3: At most 1 golden bubble, does not appear every level (never consecutive levels).
 		let goldenIndex: number | null = null;
-		const spawnGolden = this.level === 1 || Math.random() < 0.55 || this.level % 2 === 1;
-		if (spawnGolden && targetIndices.length > 0) {
-			const slot = Math.floor(Math.random() * targetIndices.length);
-			goldenIndex = targetIndices[slot];
+		if (this.level >= 3 && targetIndices.length > 0) {
+			const levelsSinceLast = this.level - this.lastGoldenLevel;
+			// Ensure at least 1 level break between golden appearances (never consecutive)
+			if (levelsSinceLast >= 2) {
+				const shouldSpawn = levelsSinceLast >= 4 || Math.random() < 0.4;
+				if (shouldSpawn) {
+					const slot = Math.floor(Math.random() * targetIndices.length);
+					goldenIndex = targetIndices[slot];
+					this.lastGoldenLevel = this.level;
+				}
+			}
 		}
 		this.goldenBubbleId = goldenIndex;
 
 		// 2. Hazard Bubbles:
-		// Always spawn 1 hazard right from Level 1 so player immediately encounters it!
-		// Level >= 7: 1-2 hazards if space permits
+		// Early levels (Level 1-2): NO hazard bubbles.
+		// As levels increase, hazards scale up gradually:
+		// - Level 3-4: 1 hazard
+		// - Level 5-7: 2 hazards
+		// - Level 8+: 3 hazards (capped to leave space for neutral bubbles)
 		const hazardSet = new Set<number>();
-		if (remainingIndices.length > 0) {
-			let maxHazards = 1;
-			if (this.level >= 7 && remainingIndices.length >= 3) {
-				maxHazards = Math.random() < 0.5 ? 2 : 1;
+		if (this.level >= 3 && remainingIndices.length > 0) {
+			let desiredHazards = 1;
+			if (this.level >= 8) {
+				desiredHazards = 3;
+			} else if (this.level >= 5) {
+				desiredHazards = 2;
 			}
 
-			for (let i = 0; i < maxHazards && i < remainingIndices.length; i++) {
+			// Ensure hazards do not take over all remaining inactive slots
+			const maxAllowed = Math.max(1, remainingIndices.length - 1);
+			const count = Math.min(desiredHazards, maxAllowed, remainingIndices.length);
+
+			for (let i = 0; i < count; i++) {
 				hazardSet.add(remainingIndices[i]);
 			}
 		}
@@ -457,13 +510,14 @@ export class PopItGame {
 
 			this.remainingTime = remainingMs / 1000;
 
-			// Urgent sound cues when reaching thresholds
-			if (this.remainingTime <= 1.5 && this.lastWarningThreshold > 1.5) {
-				this.lastWarningThreshold = 1.5;
-				playSound('timer-critical');
-			} else if (this.remainingTime <= 3.0 && this.lastWarningThreshold > 3.0) {
+			// Urgent sound cue when entering "HURRY UP!" (<= 3.0s)
+			if (this.remainingTime <= 3.0 && this.lastWarningThreshold > 3.0) {
 				this.lastWarningThreshold = 3.0;
-				playSound('timer-warning');
+				playSound('hurry-up');
+			} else if (this.remainingTime > 3.0 && this.lastWarningThreshold <= 3.0) {
+				// Player recovered time above 3s via combo/golden bonus!
+				this.lastWarningThreshold = 100;
+				sound.stopTimeSound();
 			}
 
 			// Golden bubble 2-second lifespan countdown
@@ -512,6 +566,12 @@ export class PopItGame {
 			clearTimeout(this.nextLevelTimer);
 			this.nextLevelTimer = null;
 		}
+		for (const timer of this.countdownTimers) {
+			clearTimeout(timer);
+		}
+		this.countdownTimers = [];
+		sound.stopCountDownSound();
+		sound.stopTimeSound();
 	}
 
 	public destroy(): void {

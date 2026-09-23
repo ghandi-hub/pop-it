@@ -1,17 +1,19 @@
 <script lang="ts">
 	import type { Bubble, GameFeedbackEvent, GameState } from '$lib/games/pop-it/types';
 	import PopBubble from './PopBubble.svelte';
+	import CountdownOverlay from './CountdownOverlay.svelte';
 
 	interface Props {
 		bubbles: Bubble[];
 		activeCount: number;
 		hazardCount?: number;
+		countdown?: number;
 		lastFeedback?: GameFeedbackEvent | null;
 		gameState: GameState;
 		onPop: (id: number) => void;
 	}
 
-	let { bubbles, activeCount, hazardCount = 0, lastFeedback = null, gameState, onPop }: Props = $props();
+	let { bubbles, activeCount, hazardCount = 0, countdown = 3, lastFeedback = null, gameState, onPop }: Props = $props();
 
 	// 4 columns on mobile gives generous breathing room so buttons never crowd each other
 	let gridColsClass = $derived.by(() => {
@@ -53,10 +55,14 @@
 
 	<!-- Toy Pop It Outer Silicone Casing -->
 	<div
-		class="relative w-full rounded-2xl sm:rounded-3xl bg-[#FFD166] border-3 sm:border-4 border-[#111111] p-2.5 sm:p-4 shadow-[5px_5px_0_#111111] sm:shadow-[8px_8px_0_#111111] transition-all duration-200 {isShaking ? 'animate-shake' : ''} {isLevelClear
+		class="relative overflow-hidden w-full rounded-2xl sm:rounded-3xl bg-[#FFD166] border-3 sm:border-4 border-[#111111] p-2.5 sm:p-4 shadow-[5px_5px_0_#111111] sm:shadow-[8px_8px_0_#111111] transition-all duration-200 {isShaking ? 'animate-shake' : ''} {isLevelClear
 			? 'scale-[1.02] shadow-[10px_10px_0_#111111]'
 			: ''} {isGameOver ? 'opacity-85 filter contrast-90' : ''}"
 	>
+		{#if gameState === 'countdown'}
+			<CountdownOverlay {countdown} />
+		{/if}
+
 		<!-- Embossed top toy branding -->
 		<div class="flex items-center justify-between pb-2 px-1 text-xs font-black uppercase tracking-wider text-[#111111]/80 select-none">
 			<span class="flex items-center gap-1.5">

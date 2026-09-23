@@ -1,4 +1,4 @@
-export type GameState = 'idle' | 'playing' | 'level-clear' | 'game-over';
+export type GameState = 'idle' | 'countdown' | 'playing' | 'level-clear' | 'game-over';
 
 export type BubbleType = 'normal' | 'hazard' | 'golden';
 
@@ -42,6 +42,7 @@ export interface GameFeedbackEvent {
 export interface GameSnapshot {
 	state: GameState;
 	level: number;
+	countdown: number; // 3, 2, 1, or 0 (GO)
 	bubbles: Bubble[];
 	totalBubbles: number;
 	activeCount: number; // target count to pop (normal + golden)

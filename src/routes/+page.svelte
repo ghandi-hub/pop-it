@@ -15,6 +15,7 @@
   let snapshot = $state<GameSnapshot>({
     state: "idle",
     level: 1,
+    countdown: 3,
     bubbles: [],
     totalBubbles: 20,
     activeCount: 4,
@@ -241,6 +242,7 @@
               bubbles={snapshot.bubbles}
               activeCount={snapshot.activeCount}
               hazardCount={snapshot.hazardCount}
+              countdown={snapshot.countdown}
               lastFeedback={snapshot.lastFeedback}
               gameState={snapshot.state}
               onPop={handlePop}
