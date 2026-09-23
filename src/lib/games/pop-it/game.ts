@@ -1,6 +1,6 @@
 import { getLevelConfig } from './difficulty';
 import { calculateBubblePopScore, calculateLevelClearScore, COMBO_TIMEOUT_MS } from './score';
-import { playSound } from './sound';
+import { playSound, sound } from './sound';
 import type { Bubble, GameSnapshot, GameState } from './types';
 
 const BEST_SCORE_STORAGE_KEY = 'pop-it-time-attack:best-score';
@@ -129,7 +129,7 @@ export class PopItGame {
 		this.initBubbles(config.totalBubbles, config.activeCount);
 
 		this.state = 'playing';
-		playSound('button-press');
+		sound.startBgm();
 
 		this.startTimer(this.remainingTime);
 		this.notify();
@@ -260,6 +260,7 @@ export class PopItGame {
 
 	private handleGameOver(): void {
 		this.cleanupTimers();
+		sound.stopBgm();
 		this.state = 'game-over';
 		this.remainingTime = 0;
 		playSound('game-over');
@@ -318,6 +319,7 @@ export class PopItGame {
 
 	public destroy(): void {
 		this.cleanupTimers();
+		sound.stopBgm();
 		this.listeners.clear();
 	}
 }

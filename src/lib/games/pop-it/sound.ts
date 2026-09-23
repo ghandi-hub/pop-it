@@ -1,3 +1,8 @@
+import popSoundUrl from '$lib/assets/sound/pop.mp3';
+import levelWinSoundUrl from '$lib/assets/sound/level-win.mp3';
+import gameOverSoundUrl from '$lib/assets/sound/game-over.mp3';
+import backsoundUrl from '$lib/assets/sound/backsound.mp3';
+
 export type SoundEvent =
 	| 'bubble-pop'
 	| 'button-press'
@@ -12,9 +17,25 @@ const SOUND_STORAGE_KEY = 'pop-it-time-attack:sound-enabled';
 class SoundManager {
 	private ctx: AudioContext | null = null;
 	private enabled = true;
-	private volume = 0.7;
+	private volume = 0.85;
 	private masterGain: GainNode | null = null;
-	private isInitialized = false;
+
+	// Audio buffers
+	private popBuffer: AudioBuffer | null = null;
+	private levelWinBuffer: AudioBuffer | null = null;
+	private gameOverBuffer: AudioBuffer | null = null;
+
+	// Immediate HTMLAudioElement fallback pool for pop.mp3
+	private popPool: HTMLAudioElement[] = [];
+	private popPoolIndex = 0;
+
+	// Fallback audio elements for longer sounds
+	private levelWinAudio: HTMLAudioElement | null = null;
+	private gameOverAudio: HTMLAudioElement | null = null;
+
+	// Background Music (backsound.mp3)
+	private bgmAudio: HTMLAudioElement | null = null;
+	private isBgmPlaying = false;
 
 	constructor() {
 		if (typeof window !== 'undefined') {
@@ -26,24 +47,83 @@ class SoundManager {
 			} catch {
 				this.enabled = true;
 			}
+
+			this.preloadAudioAssets();
+		}
+	}
+
+	/**
+	 * Preload all downloaded sound assets on module startup
+	 */
+	private preloadAudioAssets(): void {
+		if (typeof window === 'undefined') return;
+
+		try {
+			// 1. Preload pop.mp3 pool for instant tapping
+			for (let i = 0; i < 6; i++) {
+				const a = new Audio(popSoundUrl);
+				a.preload = 'auto';
+				a.volume = this.volume;
+				this.popPool.push(a);
+			}
+
+			// 2. Preload level-win.mp3
+			this.levelWinAudio = new Audio(levelWinSoundUrl);
+			this.levelWinAudio.preload = 'auto';
+			this.levelWinAudio.volume = 0.9;
+
+			// 3. Preload game-over.mp3
+			this.gameOverAudio = new Audio(gameOverSoundUrl);
+			this.gameOverAudio.preload = 'auto';
+			this.gameOverAudio.volume = 0.9;
+
+			// 4. Preload backsound.mp3 (Looping background music)
+			this.bgmAudio = new Audio(backsoundUrl);
+			this.bgmAudio.preload = 'auto';
+			this.bgmAudio.loop = true;
+			this.bgmAudio.volume = 0.35; // balanced background level
+		} catch (err) {
+			console.warn('Audio preloading error:', err);
 		}
 	}
 
 	public init(): void {
-		if (this.isInitialized || typeof window === 'undefined') return;
+		if (typeof window === 'undefined') return;
 
 		try {
-			const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-			if (AudioContextClass) {
-				this.ctx = new AudioContextClass();
-				this.masterGain = this.ctx.createGain();
-				this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
-				this.masterGain.connect(this.ctx.destination);
-				this.isInitialized = true;
+			if (!this.ctx) {
+				const AudioContextClass =
+					window.AudioContext ||
+					(window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+				if (AudioContextClass) {
+					this.ctx = new AudioContextClass();
+					this.masterGain = this.ctx.createGain();
+					this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
+					this.masterGain.connect(this.ctx.destination);
+				}
+			}
+
+			// Fetch and decode into Web Audio buffers for polyphony & instant playback
+			if (this.ctx) {
+				if (!this.popBuffer) this.loadBuffer(popSoundUrl, (buf) => (this.popBuffer = buf));
+				if (!this.levelWinBuffer) this.loadBuffer(levelWinSoundUrl, (buf) => (this.levelWinBuffer = buf));
+				if (!this.gameOverBuffer) this.loadBuffer(gameOverSoundUrl, (buf) => (this.gameOverBuffer = buf));
 			}
 		} catch {
-			// Web Audio not supported or blocked, continue silently
+			// Web Audio not supported
 		}
+	}
+
+	private loadBuffer(url: string, callback: (buf: AudioBuffer) => void): void {
+		if (!this.ctx) return;
+		fetch(url)
+			.then((res) => res.arrayBuffer())
+			.then((ab) => this.ctx?.decodeAudioData(ab))
+			.then((decoded) => {
+				if (decoded) callback(decoded);
+			})
+			.catch(() => {});
 	}
 
 	public toggleSound(): boolean {
@@ -60,7 +140,14 @@ class SoundManager {
 			this.masterGain.gain.setValueAtTime(this.enabled ? this.volume : 0, this.ctx.currentTime);
 		}
 
-		// Also initialize audio context if user toggles on
+		if (this.bgmAudio) {
+			if (!this.enabled) {
+				this.bgmAudio.pause();
+			} else if (this.isBgmPlaying) {
+				this.bgmAudio.play().catch(() => {});
+			}
+		}
+
 		if (this.enabled) {
 			this.init();
 			this.resume();
@@ -78,6 +165,9 @@ class SoundManager {
 		if (this.masterGain && this.ctx && this.enabled) {
 			this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
 		}
+		if (this.bgmAudio) {
+			this.bgmAudio.volume = this.volume * 0.4;
+		}
 	}
 
 	public resume(): void {
@@ -89,29 +179,51 @@ class SoundManager {
 		}
 	}
 
+	/**
+	 * Start playing backsound.mp3 looping in background
+	 */
+	public startBgm(): void {
+		this.isBgmPlaying = true;
+		if (!this.enabled || !this.bgmAudio) return;
+
+		try {
+			this.bgmAudio.currentTime = 0;
+			this.bgmAudio.play().catch(() => {});
+		} catch {
+			// Autoplay blocked until gesture
+		}
+	}
+
+	/**
+	 * Pause or stop backsound.mp3
+	 */
+	public stopBgm(): void {
+		this.isBgmPlaying = false;
+		if (this.bgmAudio) {
+			this.bgmAudio.pause();
+		}
+	}
+
 	public play(event: SoundEvent): void {
 		if (!this.enabled) return;
 
 		this.resume();
-		if (!this.ctx || !this.masterGain) return;
 
 		try {
-			const now = this.ctx.currentTime;
+			const now = this.ctx ? this.ctx.currentTime : 0;
 			switch (event) {
 				case 'bubble-pop':
-					this.playBubblePop(now);
-					break;
 				case 'button-press':
-					this.playButtonPress(now);
+					this.playPopSound(now);
 					break;
 				case 'level-clear':
-					this.playLevelClear(now);
+					this.playLevelWinSound(now);
+					break;
+				case 'game-over':
+					this.playGameOverSound(now);
 					break;
 				case 'time-bonus':
 					this.playTimeBonus(now);
-					break;
-				case 'game-over':
-					this.playGameOver(now);
 					break;
 				case 'timer-warning':
 					this.playTimerWarning(now);
@@ -126,108 +238,102 @@ class SoundManager {
 	}
 
 	/**
-	 * Tactile pop sound:
-	 * Rapid pitch-dropped sine + gentle rubbery click impulse (40-100ms)
-	 * With ±5% random pitch variation to prevent repetition fatigue.
+	 * Play pop.mp3 with organic pitch jitter
 	 */
-	private playBubblePop(now: number): void {
-		if (!this.ctx || !this.masterGain) return;
+	private playPopSound(now: number): void {
+		if (this.popBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.popBuffer;
 
-		// Subtle pitch variation: 380Hz to 460Hz
-		const pitchJitter = 1 + (Math.random() * 0.12 - 0.06);
-		const startFreq = 420 * pitchJitter;
-		const endFreq = 110 * pitchJitter;
+				const pitchJitter = 1 + (Math.random() * 0.08 - 0.04);
+				source.playbackRate.setValueAtTime(pitchJitter, now);
 
-		const osc = this.ctx.createOscillator();
-		const gain = this.ctx.createGain();
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
 
-		osc.type = 'sine';
-		osc.frequency.setValueAtTime(startFreq, now);
-		osc.frequency.exponentialRampToValueAtTime(endFreq, now + 0.07);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+				source.start(now);
+				return;
+			} catch {
+				// Fallback
+			}
+		}
 
-		// Snappy attack, quick exponential decay
-		gain.gain.setValueAtTime(0.7, now);
-		gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-
-		// Subtle high-click transient for tactile feel
-		const clickOsc = this.ctx.createOscillator();
-		const clickGain = this.ctx.createGain();
-		clickOsc.type = 'triangle';
-		clickOsc.frequency.setValueAtTime(950 * pitchJitter, now);
-		clickOsc.frequency.exponentialRampToValueAtTime(200, now + 0.02);
-		clickGain.gain.setValueAtTime(0.3, now);
-		clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.025);
-
-		osc.connect(gain);
-		clickOsc.connect(clickGain);
-		gain.connect(this.masterGain);
-		clickGain.connect(this.masterGain);
-
-		osc.start(now);
-		osc.stop(now + 0.09);
-		clickOsc.start(now);
-		clickOsc.stop(now + 0.03);
+		if (this.popPool.length > 0) {
+			try {
+				const audio = this.popPool[this.popPoolIndex];
+				this.popPoolIndex = (this.popPoolIndex + 1) % this.popPool.length;
+				audio.currentTime = 0;
+				audio.play().catch(() => {});
+			} catch {}
+		}
 	}
 
 	/**
-	 * Crisp arcade button press
+	 * Play level-win.mp3 on level completion
 	 */
-	private playButtonPress(now: number): void {
-		if (!this.ctx || !this.masterGain) return;
+	private playLevelWinSound(now: number): void {
+		// Duck BGM momentarily during victory sound
+		if (this.bgmAudio && this.isBgmPlaying) {
+			this.bgmAudio.volume = 0.15;
+			setTimeout(() => {
+				if (this.bgmAudio && this.isBgmPlaying && this.enabled) {
+					this.bgmAudio.volume = 0.35;
+				}
+			}, 1200);
+		}
 
-		const osc = this.ctx.createOscillator();
-		const gain = this.ctx.createGain();
+		if (this.levelWinBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.levelWinBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+				source.start(now);
+				return;
+			} catch {}
+		}
 
-		osc.type = 'square';
-		osc.frequency.setValueAtTime(320, now);
-		osc.frequency.exponentialRampToValueAtTime(140, now + 0.05);
-
-		gain.gain.setValueAtTime(0.3, now);
-		gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
-
-		osc.connect(gain);
-		gain.connect(this.masterGain);
-
-		osc.start(now);
-		osc.stop(now + 0.06);
+		if (this.levelWinAudio) {
+			this.levelWinAudio.currentTime = 0;
+			this.levelWinAudio.play().catch(() => {});
+		}
 	}
 
 	/**
-	 * Upbeat 4-note ascending arcade fanfare
+	 * Play game-over.mp3 when timer reaches zero
 	 */
-	private playLevelClear(now: number): void {
-		if (!this.ctx || !this.masterGain) return;
+	private playGameOverSound(now: number): void {
+		// Stop BGM completely on game over
+		this.stopBgm();
 
-		const notes = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
-		const step = 0.08;
+		if (this.gameOverBuffer && this.ctx && this.masterGain) {
+			try {
+				const source = this.ctx.createBufferSource();
+				source.buffer = this.gameOverBuffer;
+				const gain = this.ctx.createGain();
+				gain.gain.setValueAtTime(1.0, now);
+				source.connect(gain);
+				gain.connect(this.masterGain);
+				source.start(now);
+				return;
+			} catch {}
+		}
 
-		notes.forEach((freq, idx) => {
-			if (!this.ctx || !this.masterGain) return;
-			const noteTime = now + idx * step;
-			const osc = this.ctx.createOscillator();
-			const gain = this.ctx.createGain();
-
-			osc.type = 'triangle';
-			osc.frequency.setValueAtTime(freq, noteTime);
-
-			gain.gain.setValueAtTime(0.45, noteTime);
-			gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.22);
-
-			osc.connect(gain);
-			gain.connect(this.masterGain);
-
-			osc.start(noteTime);
-			osc.stop(noteTime + 0.25);
-		});
+		if (this.gameOverAudio) {
+			this.gameOverAudio.currentTime = 0;
+			this.gameOverAudio.play().catch(() => {});
+		}
 	}
 
-	/**
-	 * Sparkly chime for time bonus
-	 */
 	private playTimeBonus(now: number): void {
 		if (!this.ctx || !this.masterGain) return;
 
-		const notes = [659.25, 987.77]; // E5, B5
+		const notes = [659.25, 987.77];
 		notes.forEach((freq, idx) => {
 			if (!this.ctx || !this.masterGain) return;
 			const noteTime = now + idx * 0.06;
@@ -248,44 +354,18 @@ class SoundManager {
 		});
 	}
 
-	/**
-	 * Retro descending thud / game over
-	 */
-	private playGameOver(now: number): void {
-		if (!this.ctx || !this.masterGain) return;
-
-		const osc = this.ctx.createOscillator();
-		const gain = this.ctx.createGain();
-
-		osc.type = 'sawtooth';
-		osc.frequency.setValueAtTime(260, now);
-		osc.frequency.exponentialRampToValueAtTime(55, now + 0.45);
-
-		gain.gain.setValueAtTime(0.4, now);
-		gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-
-		osc.connect(gain);
-		gain.connect(this.masterGain);
-
-		osc.start(now);
-		osc.stop(now + 0.52);
-	}
-
 	private playTimerWarning(now: number): void {
 		if (!this.ctx || !this.masterGain) return;
 
 		const osc = this.ctx.createOscillator();
 		const gain = this.ctx.createGain();
-
 		osc.type = 'sine';
 		osc.frequency.setValueAtTime(750, now);
-
 		gain.gain.setValueAtTime(0.25, now);
 		gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
 
 		osc.connect(gain);
 		gain.connect(this.masterGain);
-
 		osc.start(now);
 		osc.stop(now + 0.07);
 	}
@@ -295,16 +375,13 @@ class SoundManager {
 
 		const osc = this.ctx.createOscillator();
 		const gain = this.ctx.createGain();
-
 		osc.type = 'sine';
 		osc.frequency.setValueAtTime(980, now);
-
 		gain.gain.setValueAtTime(0.35, now);
 		gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
 
 		osc.connect(gain);
 		gain.connect(this.masterGain);
-
 		osc.start(now);
 		osc.stop(now + 0.06);
 	}
