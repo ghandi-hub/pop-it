@@ -577,6 +577,17 @@ export class PopItGame {
       Math.round((currentRemaining + config.bonusTime) * 100) / 100,
     );
 
+    // Physical mechanical reset at 500ms (all popped bubbles push back up before new stage lights up)
+    const resetTimer = setTimeout(() => {
+      if (this.state !== "level-clear") return;
+      this.bubbles = this.bubbles.map((b) => ({
+        ...b,
+        pressed: false,
+      }));
+      this.notify();
+    }, 500);
+    this.countdownTimers.push(resetTimer);
+
     // Celebration delay (~750ms) before initiating next level
     this.nextLevelTimer = setTimeout(() => {
       this.advanceToNextLevel(nextTime);

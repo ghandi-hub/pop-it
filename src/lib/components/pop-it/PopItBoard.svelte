@@ -55,7 +55,7 @@
 
 	<!-- Toy Pop It Outer Silicone Casing -->
 	<div
-		class="relative overflow-hidden w-full rounded-2xl sm:rounded-3xl bg-[#FFD166] border-3 sm:border-4 border-[#111111] p-2.5 sm:p-4 shadow-[5px_5px_0_#111111] sm:shadow-[8px_8px_0_#111111] transition-all duration-200 {isShaking ? 'animate-shake' : ''} {isLevelClear
+		class="relative overflow-hidden w-full rounded-2xl sm:rounded-3xl bg-[#FFD166] border-3 sm:border-4 border-[#111111] p-2.5 sm:p-4 shadow-[5px_5px_0_#111111] sm:shadow-[8px_8px_0_#111111] transition-[transform,box-shadow,opacity] duration-200 {isShaking ? 'animate-shake' : ''} {isLevelClear
 			? 'scale-[1.02] shadow-[10px_10px_0_#111111]'
 			: ''} {isGameOver ? 'opacity-85 filter contrast-90' : ''}"
 	>

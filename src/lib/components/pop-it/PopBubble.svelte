@@ -125,7 +125,7 @@
 
 	<!-- Cavity socket in the silicone body (large, generous touch target) -->
 	<div
-		class="relative w-13 h-13 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full {theme.cavity} p-1 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] flex items-center justify-center transition-all duration-150 {active
+		class="relative w-13 h-13 sm:w-14 sm:h-14 md:w-16 md:h-16 rounded-full {theme.cavity} p-1 shadow-[inset_0_3px_5px_rgba(0,0,0,0.7)] flex items-center justify-center transition-opacity duration-150 {active
 			? 'border border-black/40'
 			: 'opacity-40 border border-black/20'}"
 	>
@@ -137,7 +137,7 @@
 			aria-pressed={pressed}
 			onpointerdown={handlePointerDown}
 			onkeydown={handleKeyDown}
-			class="relative w-full h-full rounded-full select-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-black focus-visible:ring-offset-2 transition-all duration-100 ease-out {active
+			class="relative w-full h-full rounded-full select-none focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-black focus-visible:ring-offset-2 transition-[transform,box-shadow,opacity] duration-75 ease-out {active
 				? pressed
 					? 'scale-[0.84] translate-y-1 shadow-[inset_0_4px_6px_rgba(0,0,0,0.8)] cursor-pointer'
 					: `cursor-pointer active:scale-[0.88] active:translate-y-0.5 hover:scale-[1.04] ${theme.glow}`
@@ -145,7 +145,7 @@
 		>
 			<!-- Bubble dome surface -->
 			<div
-				class="w-full h-full rounded-full border border-black/30 bg-gradient-to-b transition-all duration-150 flex items-center justify-center {active
+				class="w-full h-full rounded-full border border-black/30 bg-gradient-to-b flex items-center justify-center {active
 					? pressed
 						? theme.sunken
 						: theme.lit

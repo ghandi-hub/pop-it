@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { fade } from 'svelte/transition';
+
 	interface Props {
 		level: number;
 		timeBonus: number;
@@ -7,7 +9,10 @@
 	let { level, timeBonus }: Props = $props();
 </script>
 
-<div class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-3 select-none">
+<div
+	transition:fade={{ duration: 150 }}
+	class="absolute inset-0 flex items-center justify-center z-20 pointer-events-none p-3 select-none"
+>
 	<div
 		class="px-6 py-3 sm:px-8 sm:py-3.5 rounded-2xl bg-[#111111] text-white border-3 border-[#111111] shadow-[5px_5px_0_rgba(0,0,0,0.35)] flex flex-col items-center justify-center animate-pop"
 	>
