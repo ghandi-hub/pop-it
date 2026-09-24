@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import type { GameSnapshot } from "$lib/games/pop-it/types";
+  import { sound } from "$lib/games/pop-it/sound";
   import PopItButton from "./PopItButton.svelte";
 
   interface Props {
@@ -9,6 +11,37 @@
   }
 
   let { snapshot, onRestart, onHome }: Props = $props();
+
+  let isLocked = $state(true);
+  let lockTimer: ReturnType<typeof setTimeout> | null = null;
+  let unsubscribeSound: (() => void) | null = null;
+
+  onMount(() => {
+    // Lock modal interactions while game over sound effect is playing
+    isLocked = true;
+
+    if (sound.isSoundEnabled()) {
+      unsubscribeSound = sound.onGameOverSoundChange((playing) => {
+        if (!playing) {
+          isLocked = false;
+        }
+      });
+      // Safety release after sound length (~4.3s)
+      lockTimer = setTimeout(() => {
+        isLocked = false;
+      }, 4400);
+    } else {
+      // If sound is disabled, guard against rapid reflex taps for 1.8s
+      lockTimer = setTimeout(() => {
+        isLocked = false;
+      }, 1800);
+    }
+  });
+
+  onDestroy(() => {
+    if (lockTimer) clearTimeout(lockTimer);
+    if (unsubscribeSound) unsubscribeSound();
+  });
 
   let playerName = $state("");
   let isSubmitting = $state(false);
@@ -52,6 +85,7 @@
 
 <div
   class="fixed inset-0 bg-black/70 backdrop-blur-[2px] z-30 flex items-center justify-center p-4 select-none"
+  class:pointer-events-none={isLocked}
 >
   <div
     class="relative w-full max-w-md rounded-3xl bg-[#F4EBD0] border-4 border-[#111111] p-6 shadow-[10px_10px_0_#111111] animate-in zoom-in-95 duration-200 text-[#111111]"
@@ -172,18 +206,46 @@
       <PopItButton
         variant="primary"
         size="lg"
+        disabled={isLocked}
         onclick={onRestart}
-        class="w-full text-lg shadow-[4px_4px_0_#111111]"
+        class="w-full text-lg shadow-[4px_4px_0_#111111] transition-all min-h-[52px]"
       >
-        TRY AGAIN ↺
+        {#if isLocked}
+          <div class="flex items-center justify-center py-0.5">
+            <svg
+              class="animate-spin h-6 w-6 text-[#111111]"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-label="Loading"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-90"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+          </div>
+        {:else}
+          TRY AGAIN ↺
+        {/if}
       </PopItButton>
 
       {#if onHome}
         <PopItButton
           variant="paper"
           size="md"
+          disabled={isLocked}
           onclick={onHome}
-          class="w-full text-sm font-black uppercase shadow-[3px_3px_0_#111111]"
+          class="w-full text-sm font-black uppercase shadow-[3px_3px_0_#111111] transition-all min-h-[42px]"
         >
           MAIN MENU
         </PopItButton>

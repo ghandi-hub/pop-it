@@ -22,8 +22,8 @@ export class PopItGame {
   private pressedCount = 0;
 
   // High precision timestamp timer
-  private remainingTime = 5.0;
-  private baseTime = 5.0;
+  private remainingTime = 5.5;
+  private baseTime = 5.5;
   private timerStartTime = 0;
   private timerDurationMs = 0;
   private rafId: number | null = null;
@@ -591,8 +591,9 @@ export class PopItGame {
     this.level++;
     const nextConfig = getLevelConfig(this.level);
 
-    // Minimum floor 2.5s only to prevent instant 0s death, capped at MAX_TIMER_CAP
-    const startingTime = Math.min(MAX_TIMER_CAP, Math.max(carriedTime, 2.5));
+    // Fair emergency floor scaling with active target count so high levels aren't unwinnable
+    const minSafeTime = Math.max(3.0, Math.round(nextConfig.activeCount * 0.25 * 10) / 10);
+    const startingTime = Math.min(MAX_TIMER_CAP, Math.max(carriedTime, minSafeTime));
     this.baseTime = Math.max(startingTime, nextConfig.baseTime);
     this.remainingTime = startingTime;
     this.initBubbles(nextConfig.totalBubbles, nextConfig.activeCount);

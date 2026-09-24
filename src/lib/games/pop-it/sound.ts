@@ -56,6 +56,8 @@ class SoundManager {
 	private countDownAudio: HTMLAudioElement | null = null;
 	private timeAudio: HTMLAudioElement | null = null;
 	private isTimePlaying = false;
+	private isGameOverPlaying = false;
+	private gameOverListeners = new Set<(playing: boolean) => void>();
 
 	// Background Music (backsound.mp3)
 	private bgmAudio: HTMLAudioElement | null = null;
@@ -258,10 +260,39 @@ class SoundManager {
 	}
 
 	/**
+	 * Returns true if game over sound is currently playing
+	 */
+	public isGameOverSoundActive(): boolean {
+		return this.isGameOverPlaying;
+	}
+
+	/**
+	 * Subscribe to game over sound state changes (playing -> true, finished -> false)
+	 */
+	public onGameOverSoundChange(listener: (playing: boolean) => void): () => void {
+		this.gameOverListeners.add(listener);
+		listener(this.isGameOverPlaying);
+		return () => {
+			this.gameOverListeners.delete(listener);
+		};
+	}
+
+	private setGameOverPlaying(playing: boolean): void {
+		if (this.isGameOverPlaying === playing) return;
+		this.isGameOverPlaying = playing;
+		for (const listener of this.gameOverListeners) {
+			try {
+				listener(playing);
+			} catch {}
+		}
+	}
+
+	/**
 	 * Instantly stop game-over sound when player restarts / tries again
 	 */
 	public stopGameOverSound(): void {
 		this.stopTimeSound();
+		this.setGameOverPlaying(false);
 		if (this.gameOverSource) {
 			try {
 				this.gameOverSource.stop();
@@ -271,6 +302,7 @@ class SoundManager {
 		}
 		if (this.gameOverAudio) {
 			try {
+				this.gameOverAudio.onended = null;
 				this.gameOverAudio.pause();
 				this.gameOverAudio.currentTime = 0;
 			} catch {}
@@ -472,6 +504,13 @@ class SoundManager {
 		this.stopBgm();
 		this.stopGameOverSound();
 
+		if (!this.enabled) {
+			this.setGameOverPlaying(false);
+			return;
+		}
+
+		this.setGameOverPlaying(true);
+
 		if (this.gameOverBuffer && this.ctx && this.masterGain) {
 			try {
 				const source = this.ctx.createBufferSource();
@@ -485,6 +524,7 @@ class SoundManager {
 				source.onended = () => {
 					if (this.gameOverSource === source) {
 						this.gameOverSource = null;
+						this.setGameOverPlaying(false);
 					}
 				};
 
@@ -495,8 +535,16 @@ class SoundManager {
 
 		if (this.gameOverAudio) {
 			this.gameOverAudio.currentTime = 0;
-			this.gameOverAudio.play().catch(() => {});
+			this.gameOverAudio.onended = () => {
+				this.setGameOverPlaying(false);
+			};
+			this.gameOverAudio.play().catch(() => {
+				this.setGameOverPlaying(false);
+			});
+			return;
 		}
+
+		this.setGameOverPlaying(false);
 	}
 
 	private playTimeBonus(now: number): void {
