@@ -22,16 +22,16 @@ export function calculateBubblePopScore(currentCombo: number): PopResult {
 		points += Math.min(newCombo * 5, 100);
 	}
 
-	// Combo milestones matching PRD section 16:
-	// x5 -> +0.2s, x10 -> +0.5s, x20 -> +1.0s, and every +10 afterwards -> +1.0s
+	// Combo milestones:
+	// x5 -> +0.2s, x10 -> +0.3s, x20 -> +0.4s, and every +10 afterwards -> +0.4s
 	if (newCombo === 5) {
 		comboTimeBonus = 0.2;
 		isMilestone = true;
 	} else if (newCombo === 10) {
-		comboTimeBonus = 0.5;
+		comboTimeBonus = 0.3;
 		isMilestone = true;
 	} else if (newCombo === 20 || (newCombo > 20 && newCombo % 10 === 0)) {
-		comboTimeBonus = 1.0;
+		comboTimeBonus = 0.4;
 		isMilestone = true;
 	}
 

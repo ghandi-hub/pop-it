@@ -1,4 +1,4 @@
-import { getLevelConfig } from './difficulty';
+import { getLevelConfig, MAX_TIMER_CAP } from './difficulty';
 import { calculateBubblePopScore, calculateLevelClearScore } from './score';
 import { playSound, sound } from './sound';
 import type { Bubble, GameFeedbackEvent, GameSnapshot, GameState } from './types';
@@ -17,8 +17,8 @@ export class PopItGame {
 	private pressedCount = 0;
 
 	// High precision timestamp timer
-	private remainingTime = 10.0;
-	private baseTime = 10.0;
+	private remainingTime = 5.0;
+	private baseTime = 5.0;
 	private timerStartTime = 0;
 	private timerDurationMs = 0;
 	private rafId: number | null = null;
@@ -331,7 +331,7 @@ export class PopItGame {
 
 	/**
 	 * Register a missed tap (tapping empty screen, inactive bubble, or already popped bubble).
-	 * Resets the combo streak to 0.
+	 * Resets combo streak to 0 and deducts 0.5s penalty.
 	 */
 	public registerMiss(): void {
 		if (this.state !== 'playing') return;
@@ -340,30 +340,41 @@ export class PopItGame {
 		if (now - this.lastMissTimestamp < 100) return;
 		this.lastMissTimestamp = now;
 
-		const hadCombo = this.combo > 0;
 		this.combo = 0;
 		this.lastPopTimestamp = 0;
 
+		// Deduct 0.5 seconds penalty
+		const penaltyMs = 500;
+		const elapsedMs = now - this.timerStartTime;
+		const currentRemainingMs = this.timerDurationMs - elapsedMs;
+
+		this.timerDurationMs = Math.max(0, this.timerDurationMs - penaltyMs);
+
 		// Haptic vibration feedback
 		if (typeof navigator !== 'undefined' && navigator.vibrate) {
-			navigator.vibrate(25);
+			navigator.vibrate(35);
 		}
 
 		playSound('miss');
 
-		if (hadCombo) {
-			this.lastFeedback = {
-				type: 'miss',
-				message: 'MISS! COMBO RESET',
-				timestamp: Date.now()
-			};
+		this.lastFeedback = {
+			type: 'miss',
+			message: 'MISS! -0.5s & Combo Reset!',
+			timestamp: Date.now()
+		};
 
-			setTimeout(() => {
-				if (this.lastFeedback?.type === 'miss') {
-					this.lastFeedback = null;
-					this.notify();
-				}
-			}, 800);
+		setTimeout(() => {
+			if (this.lastFeedback?.type === 'miss') {
+				this.lastFeedback = null;
+				this.notify();
+			}
+		}, 800);
+
+		// Check if penalty caused immediate time-out
+		if (currentRemainingMs <= penaltyMs) {
+			this.remainingTime = 0;
+			this.handleGameOver();
+			return;
 		}
 
 		this.notify();
@@ -446,8 +457,12 @@ export class PopItGame {
 				this.maxCombo = this.combo;
 			}
 
-			// Add 2.0 bonus seconds and 100 extra points
-			this.timerDurationMs += 2000;
+			// Add 1.2 bonus seconds (clamped to MAX_TIMER_CAP) and 100 extra points
+			const elapsedMs = now - this.timerStartTime;
+			const currentRemainingMs = Math.max(0, this.timerDurationMs - elapsedMs);
+			const newRemainingMs = Math.min(MAX_TIMER_CAP * 1000, currentRemainingMs + 1200);
+			this.timerDurationMs = elapsedMs + newRemainingMs;
+
 			const popResult = calculateBubblePopScore(this.combo - 1);
 			this.score += popResult.pointsAwarded + 100;
 
@@ -460,7 +475,7 @@ export class PopItGame {
 
 			this.lastFeedback = {
 				type: 'golden',
-				message: '✨ GOLDEN POP! +2.0s & +100 PTS!',
+				message: '✨ GOLDEN POP! +1.2s & +100 PTS!',
 				timestamp: Date.now()
 			};
 
@@ -495,9 +510,13 @@ export class PopItGame {
 		const popResult = calculateBubblePopScore(this.combo - 1);
 		this.score += popResult.pointsAwarded;
 
-		// If combo awarded bonus seconds
+		// If combo awarded bonus seconds (clamped to MAX_TIMER_CAP)
 		if (popResult.comboTimeBonus > 0) {
-			this.timerDurationMs += popResult.comboTimeBonus * 1000;
+			const elapsedMs = now - this.timerStartTime;
+			const currentRemainingMs = Math.max(0, this.timerDurationMs - elapsedMs);
+			const bonusMs = popResult.comboTimeBonus * 1000;
+			const newRemainingMs = Math.min(MAX_TIMER_CAP * 1000, currentRemainingMs + bonusMs);
+			this.timerDurationMs = elapsedMs + newRemainingMs;
 			playSound('time-bonus');
 		} else {
 			playSound('bubble-pop');
@@ -530,9 +549,9 @@ export class PopItGame {
 		playSound('level-clear');
 		this.notify();
 
-		// Carry-over time to next level (PRD 13 / Tech Spec 13)
-		// nextTime = remainingTime + bonusTime
-		const nextTime = Math.round((currentRemaining + config.bonusTime) * 100) / 100;
+		// Carry-over time to next level (clamped by MAX_TIMER_CAP)
+		// nextTime = Math.min(MAX_TIMER_CAP, remainingTime + bonusTime)
+		const nextTime = Math.min(MAX_TIMER_CAP, Math.round((currentRemaining + config.bonusTime) * 100) / 100);
 
 		// Celebration delay (~750ms) before initiating next level
 		this.nextLevelTimer = setTimeout(() => {
@@ -548,8 +567,9 @@ export class PopItGame {
 		this.level++;
 		const nextConfig = getLevelConfig(this.level);
 
-		const startingTime = Math.max(carriedTime, Math.min(nextConfig.baseTime, 6.0));
-		this.baseTime = startingTime;
+		// Minimum floor 2.5s only to prevent instant 0s death, capped at MAX_TIMER_CAP
+		const startingTime = Math.min(MAX_TIMER_CAP, Math.max(carriedTime, 2.5));
+		this.baseTime = Math.max(startingTime, nextConfig.baseTime);
 		this.remainingTime = startingTime;
 		this.initBubbles(nextConfig.totalBubbles, nextConfig.activeCount);
 

@@ -66,7 +66,7 @@
 							<div>
 								<div class="font-black text-xs uppercase text-[#B78103]">GOLDEN STAR (BONUS CEPAT)</div>
 								<div class="text-[10px] text-[#111111]/70 font-bold leading-tight">
-									Pencet dalam <strong>2 detik</strong>! Berhadiah <strong>+2.0 detik waktu</strong> dan <strong>+100 poin ekstra</strong>.
+									Pencet dalam <strong>2 detik</strong>! Berhadiah <strong>+1.2 detik waktu</strong> dan <strong>+100 poin ekstra</strong> (waktu max 8.0s).
 								</div>
 							</div>
 						</div>
@@ -84,15 +84,15 @@
 							</div>
 						</div>
 
-						<!-- Combo System -->
+						<!-- Combo System & Misclick -->
 						<div class="flex items-center gap-2.5 p-2 rounded-xl bg-[#FFFDE7]/80 border border-[#111111]/20">
 							<div class="w-8 h-8 rounded-full bg-[#FFD23F] border-2 border-black flex-shrink-0 flex items-center justify-center shadow-sm text-sm">
 								🔥
 							</div>
 							<div>
-								<div class="font-black text-xs uppercase text-[#111111]">SISTEM COMBO STREAK</div>
+								<div class="font-black text-xs uppercase text-[#111111]">COMBO & PENALTI SALAH KETUK</div>
 								<div class="text-[10px] text-[#111111]/70 font-bold leading-tight">
-									Pencet target terus tanpa henti untuk akumulasi combo antar level! Hitungan combo <strong>direset</strong> jika meleset (misal ke layar kosong/bubble mati) atau terkena bom.
+									Pencet target terus untuk milestone bonus! <strong>Awas:</strong> Ketukan meleset (bubble mati / layar kosong) memotong <strong>-0.5 detik waktu</strong> dan mereset combo!
 								</div>
 							</div>
 						</div>
