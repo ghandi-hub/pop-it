@@ -15,13 +15,8 @@
 
 	let { bubbles, activeCount, hazardCount = 0, countdown = 3, lastFeedback = null, gameState, onPop }: Props = $props();
 
-	// 4 columns on mobile gives generous breathing room so buttons never crowd each other
-	let gridColsClass = $derived.by(() => {
-		const count = bubbles.length;
-		if (count <= 20) return 'grid-cols-4 sm:grid-cols-5';
-		if (count <= 24) return 'grid-cols-4 sm:grid-cols-6';
-		return 'grid-cols-4 sm:grid-cols-5 md:grid-cols-6';
-	});
+	// 4x4 grid layout (4 columns across all viewports)
+	let gridColsClass = 'grid-cols-4';
 
 	let isLevelClear = $derived(gameState === 'level-clear');
 	let isGameOver = $derived(gameState === 'game-over');
@@ -43,7 +38,7 @@
 	});
 </script>
 
-<div class="relative w-full max-w-xl mx-auto flex flex-col items-center justify-center p-0.5 sm:p-2">
+<div class="relative w-full max-w-md mx-auto flex flex-col items-center justify-center p-0.5 sm:p-2">
 	<!-- Dynamic Floating Feedback Banner on Special Event -->
 	{#if lastFeedback && gameState === 'playing'}
 		<div

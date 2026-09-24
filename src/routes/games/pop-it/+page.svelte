@@ -21,7 +21,7 @@
     level: 1,
     countdown: 3,
     bubbles: [],
-    totalBubbles: 20,
+    totalBubbles: 16,
     activeCount: 4,
     hazardCount: 0,
     pressedCount: 0,
